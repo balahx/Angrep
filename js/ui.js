@@ -82,5 +82,7 @@
     }
   }
 
-  A.ui = { h, icon, toast, field, modal, confirm: confirmBox, download };
+  /* Logo de Angrep: dos versiones (claro y oscuro); el CSS muestra la que corresponde al tema */
+  const logo = (size, cls) => h('span', { class: 'logo ' + (cls || '') }, h('img', { class: 'lg-l', src: 'logo/angrep-logo-claro.svg', alt: 'Angrep', width: size, height: size }), h('img', { class: 'lg-d', src: 'logo/angrep-logo-oscuro.svg', alt: 'Angrep', width: size, height: size }));
+  A.ui = { h, icon, logo, toast, field, modal, confirm: confirmBox, download };
 })(window);

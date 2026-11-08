@@ -36,7 +36,7 @@
       return h('button', { class: 'key', type: 'button', 'aria-label': k === 'del' ? 'Borrar' : k, onclick: () => press(k) }, k === 'del' ? '⌫' : k);
     }));
     screen = h('div', { class: 'lock', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'App bloqueada' },
-      h('div', { class: 'lock-box' }, A.ui.icon('lock'), h('h1', null, 'App bloqueada'), h('p', { class: 'muted' }, 'Escribe tu PIN'), dots, status, pad,
+      h('div', { class: 'lock-box' }, A.ui.logo(104), h('h1', null, 'App bloqueada'), h('p', { class: 'muted' }, 'Escribe tu PIN'), dots, status, pad,
         h('button', { class: 'btn', type: 'button', onclick: submit }, 'Entrar')));
     screen.addEventListener('keydown', e => { if (/^\d$/.test(e.key)) press(e.key); else if (e.key === 'Backspace') press('del'); else if (e.key === 'Enter') submit(); });
     document.body.appendChild(screen); draw(); screen.querySelector('.key').focus();

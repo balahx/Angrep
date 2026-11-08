@@ -31,7 +31,7 @@
       else if (st === 'rejected') row.push(btn('wl-again', 'Pedir de nuevo', async () => { draw('checking'); apply(await A.cloud.askAgain()); }));
       else if (st !== 'checking') row.push(btn('wl-check', st === 'pending' ? 'Revisar ahora' : 'Reintentar', check));
       row.push(btn('wl-out', 'Cerrar sesión', out, true));
-      wallEl.replaceChildren(h('div', { class: 'lock-box' }, A.ui.icon('lock'), h('h1', { id: 'wl-title' }, t[0]), h('p', { class: 'muted', id: 'wl-text', role: 'status' }, message || t[1]), st === 'checking' ? null : h('p', { class: 'muted' }, A.store.getLocal().syncLastEmail || ''), ...row));
+      wallEl.replaceChildren(h('div', { class: 'lock-box' }, A.ui.logo(104), h('h1', { id: 'wl-title' }, t[0]), h('p', { class: 'muted', id: 'wl-text', role: 'status' }, message || t[1]), st === 'checking' ? null : h('p', { class: 'muted' }, A.store.getLocal().syncLastEmail || ''), ...row));
     };
     const apply = r => {
       if (r.state === 'ok') { close(); if (fresh) A.ui.toast('Cuenta aprobada. ¡Bienvenido!'); then(); return; }
@@ -80,7 +80,7 @@
         pw2 = up ? h('input', { class: 'txt', id: 'lg-pw2', type: 'password', autocomplete: 'new-password', 'aria-label': 'Repite la contraseña', placeholder: 'Repite la contraseña' }) : null,
         err = h('p', { class: 'note warn', role: 'alert', id: 'lg-err' }), ok = h('p', { class: 'note ok', role: 'status', id: 'lg-ok' }),
         btn = h('button', { class: 'btn', type: 'submit', id: 'lg-go' }, up ? 'Crear cuenta' : 'Entrar'), f = { em, pw, pw2, err, ok, btn };
-      const form = h('form', { class: 'lock-box', novalidate: 'novalidate' }, A.ui.icon('lock'), h('h1', null, 'Angrep'),
+      const form = h('form', { class: 'lock-box', novalidate: 'novalidate' }, A.ui.logo(104), h('h1', null, 'Angrep'),
         h('div', { class: 'tabs', role: 'group', 'aria-label': 'Modo' }, tab('in', 'Entrar'), tab('up', 'Crear cuenta')),
         em, pw, pw2, err, ok, btn,
         up ? h('p', { class: 'muted' }, 'Cada cuenta ve solo sus propios datos. Te enviaremos un correo para verificar tu dirección; hasta verificarla, tus datos quedan solo en este dispositivo.')

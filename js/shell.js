@@ -8,6 +8,7 @@
 
   function mount(host) {
     navEl = h('nav', { class: 'nav', 'aria-label': 'Menú principal' });
+    navEl.appendChild(h('div', { class: 'nav-logo' }, A.ui.logo(44), h('span', { class: 'nav-name' }, 'ANGREP')));
     N.MENUS.forEach(m => navEl.appendChild(h('a', { class: 'nav-item', href: N.href(m.id), 'data-menu': m.id },
       A.ui.icon(m.icon), h('span', { class: 'lbl-long' }, m.label), h('span', { class: 'lbl-short' }, m.short || m.label))));
     titleEl = h('h1', { id: 'title' });
@@ -16,7 +17,7 @@
     tabEl = h('div', { class: 'tabs', role: 'navigation', 'aria-label': 'Secciones' });
     viewEl = h('main', { id: 'view', tabindex: '-1' });
     host.appendChild(h('div', { class: 'shell' }, navEl,
-      h('div', { class: 'content' }, h('header', { class: 'top' }, titleEl, flagEl), subEl, tabEl, viewEl)));
+      h('div', { class: 'content' }, h('header', { class: 'top' }, A.ui.logo(36, 'top-logo'), titleEl, flagEl), subEl, tabEl, viewEl)));
     A.store.on(updateFlag);
     updateFlag();
   }
