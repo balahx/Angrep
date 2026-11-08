@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Política de seguridad: solo código propio. Si se agrega Firebase (fase 8) hay que permitirlo en script-src y connect-src. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#f4f6f8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Seguimiento">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Seguimiento</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<noscript><p class="noscript">Esta app necesita JavaScript.</p></noscript>
+<div id="app"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="version.js"></script>
+<script src="js/util.js"></script>
+<script src="js/schema.js"></script>
+<script src="js/store.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/lock.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/food.js"></script>
+<script src="js/train.js"></script>
+<script src="js/halter-import.js"></script>
+<script src="js/compliance.js"></script>
+<script src="js/pdf.js"></script>
+<script src="js/export.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/sync-firebase.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/cloud.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/photos.js"></script>
+<script src="js/docs.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/lock-ui.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/views-common.js"></script>
+<script src="js/views-datos.js"></script>
+<script src="js/views-peso.js"></script>
+<script src="js/views-comida.js"></script>
+<script src="js/views-comida-meta.js"></script>
+<script src="js/views-train.js"></script>
+<script src="js/views-train-plan.js"></script>
+<script src="js/views-halter.js"></script>
+<script src="js/views-cumpl.js"></script>
+<script src="js/views-inicio.js"></script>
+<script src="js/views-docs.js"></script>
+<script src="js/views-sync.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Cada persona solo ve y escribe lo suyo: users/{su uid}/records/*
+    match /users/{uid}/records/{key} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['t', 'd', 'u', 'del', 'at'])
+        && request.resource.data.d is string && request.resource.data.d.size() < 200000
+        && request.resource.data.u is int
+        && request.resource.data.t is string;
+      allow delete: if false;
+    }
+  }
+}
