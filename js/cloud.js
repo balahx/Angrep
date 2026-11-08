@@ -26,7 +26,29 @@
     /* Cuenta distinta a la que usó este dispositivo: sus datos locales son de otra persona */
     prevUid: () => store.getLocal().syncOwner || (store.getLocal().sync || {}).uid || null,
     switchAccount() { const l = store.getLocal(), keep = { syncCfg: l.syncCfg, syncAuth: l.syncAuth, syncLastEmail: l.syncLastEmail, sync: { uid: (l.syncAuth || {}).uid } }; store.wipe(); store.setLocal(keep); build(); },
-    signOut() { if (backend) backend.signOut(); else setAuth(null); },
+    /* ---- Accesos ---- */
+    isAdmin: () => { const a = auth(), ad = (A.defaultFirebase || {}).adminEmail; return !!(a && a.email && ad && String(a.email).toLowerCase() === String(ad).toLowerCase()); },
+    cachedOk: () => { const c = store.getLocal().syncAccess, a = auth(); return !!(c && a && c.uid === a.uid && c.ok); },
+    /* Estado del acceso: ok | unverified | pending | rejected | offline | error */
+    async access() {
+      const a = auth(); if (!a) return { state: 'error', message: 'Inicia sesión.' }; if (!backend) build();
+      const ok = () => { store.setLocal({ syncAccess: { uid: a.uid, ok: true } }); return { state: 'ok' }; }, no = st => { store.setLocal({ syncAccess: { uid: a.uid, ok: false } }); return { state: st }; };
+      if (C.isAdmin()) return ok();
+      try {
+        if (await backend.getDoc('members/' + a.uid)) return ok();
+        const v = await backend.verified(); if (v === null) return { state: C.cachedOk() ? 'ok' : 'offline' };
+        if (!v) return no('unverified');
+        const r = await backend.getDoc('requests/' + a.uid);
+        if (!r) { await backend.refresh(); await backend.createRequest(a.email); return no('pending'); }
+        return no(r.status === 'rejected' ? 'rejected' : 'pending');
+      } catch (e) { if (e && e.code === 'offline') return { state: C.cachedOk() ? 'ok' : 'offline' }; if (e && e.code === 'auth') return { state: 'error', message: e.message }; return { state: 'error', message: e && e.message || 'No se pudo comprobar tu acceso.' }; }
+    },
+    async askAgain() { if (!backend) build(); try { await backend.deleteRequest(); } catch (e) { /* ya no estaba */ } return C.access(); },
+    admin: {
+      async list() { if (!backend) build(); const r = await Promise.all([backend.listDocs('requests'), backend.listDocs('members')]); return { requests: r[0], members: r[1] }; },
+      approve: (id, email) => backend.approve(id, email), reject: id => backend.reject(id), remove: id => backend.removeMember(id), dismiss: id => backend.deleteRequest(id)
+    },
+    signOut() { if (backend) backend.signOut(); else setAuth(null); store.setLocal({ syncAccess: null }); },
     async run() { if (!C.signedIn()) return { ok: false, code: 'auth', message: 'Inicia sesión para sincronizar.' }; if (!engine) build(); engine.bind(auth().uid); return engine.run(); },
     state: () => (engine ? engine.state() : (store.getLocal().sync || {})), pending: () => (C.signedIn() && engine ? engine.pending() : 0), running: () => !!(engine && engine.isRunning()),
     start() { if (started) return; started = true; seed(); build(); A.sync.autoStart(() => { if (C.signedIn()) C.run(); }, store); }

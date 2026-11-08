@@ -78,3 +78,7 @@ No agrega tipos nuevos; solo calcula (`js/compliance.js`):
 - No se sincronizan: `photo`, `doc`, `importlog` (solo locales) ni los borradores.
 - Se ignoran registros con `updatedAt` más de 10 min en el futuro o que no sean JSON válido.
 - Reglas: `firestore.rules` (solo el dueño lee/crea/actualiza; claves permitidas `t,d,u,del,at`; sin delete).
+
+## Accesos (fase 9, versión 0.9.x)
+- Nube: `members/{uid}` `{email, approvedAt}` (cuenta aprobada; solo la crea el administrador) y `requests/{uid}` `{email, status:'pending'|'rejected', createdAt}` (la crea la persona con su correo verificado; aprobar = crear el miembro y borrar la solicitud).
+- Reglas: `users/{uid}/records/*` solo para el dueño que sea miembro (o el administrador, identificado por su correo). Local (no entra al respaldo): `syncAccess {uid, ok}` (acceso ya comprobado: permite abrir sin conexión), `syncOwner` (uid de la cuenta a la que pertenecen los datos de este dispositivo).

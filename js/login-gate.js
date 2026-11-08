@@ -8,10 +8,45 @@
   const ensureCfg = () => { if (!A.cloud.configured() && A.defaultFirebase) A.store.setLocal({ syncCfg: A.defaultFirebase }); };
   const hasData = () => Object.keys(A.store.counts()).length > 0;
 
+
+  /* Muro de acceso: la cuenta tiene que estar aprobada por el administrador (members/{uid}). Se vuelve a mirar solo cada 15 s mientras espera. */
+  const TXT = {
+    checking: ['Comprobando tu acceso…', ''],
+    unverified: ['Falta verificar tu correo', 'Abre el enlace que te enviamos por correo (revisa también el spam) y luego toca «Ya lo verifiqué».'],
+    pending: ['Solicitud enviada', 'Tu acceso tiene que ser aprobado por el administrador de la app. Esta pantalla se actualiza sola cuando lo apruebe.'],
+    rejected: ['Acceso no aprobado', 'El administrador no aprobó esta solicitud. Puedes pedirlo de nuevo.'],
+    offline: ['Sin conexión', 'Necesito internet para comprobar tu acceso, solo esta vez en este dispositivo.'],
+    error: ['No se pudo comprobar', '']
+  };
+  let wallEl = null, timer = null;
+  function wall(then, fresh) {
+    if (wallEl) return; const h = A.ui.h; wallEl = h('div', { class: 'lock', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Acceso a la app', id: 'wall' });
+    document.body.appendChild(wallEl);
+    const close = () => { clearInterval(timer); timer = null; wallEl.remove(); wallEl = null; };
+    const out = () => { A.cloud.signOut(); location.reload(); };
+    const draw = (st, message) => {
+      const t = TXT[st] || TXT.error, btn = (id, label, fn, ghost) => h('button', { class: 'btn' + (ghost ? ' ghost' : ''), type: 'button', id: id, onclick: fn }, label);
+      const row = [];
+      if (st === 'unverified') row.push(btn('wl-check', 'Ya lo verifiqué', check), btn('wl-resend', 'Reenviar correo', async e => { e.currentTarget.disabled = true; try { await A.cloud.resendVerification(); A.ui.toast('Correo enviado.'); } catch (x) { A.ui.toast(x.message); } e.currentTarget.disabled = false; }, true));
+      else if (st === 'rejected') row.push(btn('wl-again', 'Pedir de nuevo', async () => { draw('checking'); apply(await A.cloud.askAgain()); }));
+      else if (st !== 'checking') row.push(btn('wl-check', st === 'pending' ? 'Revisar ahora' : 'Reintentar', check));
+      row.push(btn('wl-out', 'Cerrar sesión', out, true));
+      wallEl.replaceChildren(h('div', { class: 'lock-box' }, A.ui.icon('lock'), h('h1', { id: 'wl-title' }, t[0]), h('p', { class: 'muted', id: 'wl-text', role: 'status' }, message || t[1]), st === 'checking' ? null : h('p', { class: 'muted' }, A.store.getLocal().syncLastEmail || ''), ...row));
+    };
+    const apply = r => {
+      if (r.state === 'ok') { close(); if (fresh) A.ui.toast('Cuenta aprobada. ¡Bienvenido!'); then(); return; }
+      draw(r.state, r.message); clearInterval(timer); timer = (r.state === 'pending' || r.state === 'unverified') ? setInterval(check, 15000) : null;
+    };
+    async function check() { apply(await A.cloud.access()); }
+    draw('checking'); check();
+  }
+  /* Con la app ya abierta: si el administrador quitó el acceso, vuelve el muro */
+  function recheck() { A.cloud.access().then(r => { if (r.state !== 'ok' && r.state !== 'offline' && r.state !== 'error') wall(() => {}); }).catch(() => {}); }
+
   function require(then) {
     if (!need()) { then(); return; }
     ensureCfg(); A.cloud.start();
-    if (A.cloud.signedIn()) { then(); return; }
+    if (A.cloud.signedIn()) { if (A.cloud.cachedOk() || A.cloud.isAdmin()) { then(); recheck(); } else wall(then); return; }
     const h = A.ui.h; let mode = 'in', busy = false;
     const screen = h('div', { class: 'lock', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Acceso' });
     const tab = (m, label) => h('button', { class: 'tab' + (mode === m ? ' on' : ''), type: 'button', id: 'lg-tab-' + m, 'aria-pressed': String(mode === m), onclick: () => { mode = m; draw(); } }, label);
@@ -29,9 +64,7 @@
           if (!ok) { A.cloud.signOut(); throw new Error('No se cambió de cuenta.'); }
           A.cloud.switchAccount();
         }
-        A.store.setLocal({ syncLastEmail: email, syncOwner: r.uid }); screen.remove();
-        if (mode === 'up') A.ui.toast('Cuenta creada. Te enviamos un correo para verificarla.');
-        then();
+        A.store.setLocal({ syncLastEmail: email, syncOwner: r.uid }); screen.remove(); wall(then, mode === 'up');
       } catch (e) { f.err.textContent = e && e.message || 'No se pudo continuar.'; busy = false; f.btn.disabled = false; f.btn.textContent = mode === 'up' ? 'Crear cuenta' : 'Entrar'; f.pw.value = ''; if (f.pw2) f.pw2.value = ''; f.pw.focus(); }
     }
     async function forgot(f) {

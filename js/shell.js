@@ -40,7 +40,7 @@
     subEl.hidden = !r.menu.subs; tabEl.hidden = !(r.menu.sections || (r.sub && r.sub.sections));
     if (r.menu.subs) r.menu.subs.forEach(s => subEl.appendChild(link(N.href(r.menu.id, s.id), s.label, s.id === r.sub.id)));
     const secs = r.sub ? r.sub.sections : r.menu.sections;
-    if (secs) secs.forEach(s => tabEl.appendChild(link(N.href(r.menu.id, r.sub && r.sub.id, s.id), s.label, s.id === r.section.id)));
+    if (secs) secs.filter(s => !s.when || s.when()).forEach(s => tabEl.appendChild(link(N.href(r.menu.id, r.sub && r.sub.id, s.id), s.label, s.id === r.section.id)));
     if (A.charts) A.charts.destroyAll();
     viewEl.innerHTML = '';
     const fn = A.views[r.key];

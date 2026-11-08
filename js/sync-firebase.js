@@ -66,7 +66,8 @@
       return idToken;
     }
     const docs = () => 'projects/' + o.cfg.projectId + '/databases/(default)/documents';
-    const authed = async (url, body) => { const t = await token(); try { return await json(url, body, { Authorization: 'Bearer ' + t }); } catch (e) { if (e.status === 401 || e.status === 403) { idToken = null; exp = 0; const t2 = await token(); return json(url, body, { Authorization: 'Bearer ' + t2 }); } throw e; } };
+    const send = (url, body, t, method) => call(url, { method: method || 'POST', headers: Object.assign(body ? { 'Content-Type': 'application/json' } : {}, { Authorization: 'Bearer ' + t }), body: body ? JSON.stringify(body) : undefined });
+    const authed = async (url, body, method) => { const t = await token(); try { return await send(url, body, t, method); } catch (e) { if (e.status === 401 || e.status === 403) { idToken = null; exp = 0; const t2 = await token(); return send(url, body, t2, method); } throw e; } };
     const uid = () => { const a = o.auth.get(); if (!a || !a.uid) throw mkErr('auth', 'Inicia sesión para sincronizar.'); return a.uid; };
 
     async function push(recs) {
@@ -88,7 +89,20 @@
       }
       return { records: out, cursor: maxAt };
     }
-    return { signIn, signUp, sendVerification, resetPassword, verified, signOut: () => { idToken = null; exp = 0; o.auth.set(null); }, push, pull, token };
+    /* ---- Accesos (aprobación por el administrador): members/{uid} y requests/{uid} ---- */
+    const flat = d => { const f = d.fields || {}, out = { id: String(d.name || '').split('/').pop() }; Object.keys(f).forEach(k => { const v = f[k]; out[k] = v.stringValue !== undefined ? v.stringValue : v.integerValue !== undefined ? +v.integerValue : v.booleanValue !== undefined ? v.booleanValue : v.timestampValue; }); return out; };
+    async function getDoc(path) { try { return flat(await authed(hosts.db + '/v1/' + docs() + '/' + path, null, 'GET')); } catch (e) { if (e.status === 404) return null; throw e; } }
+    async function listDocs(col) { const rows = await authed(hosts.db + '/v1/' + docs() + ':runQuery', { structuredQuery: { from: [{ collectionId: col }], limit: 500 } }); return (rows || []).filter(r => r.document).map(r => flat(r.document)); }
+    const commit = writes => authed(hosts.db + '/v1/' + docs() + ':commit', { writes: writes });
+    const nm = p => docs() + '/' + p, sv = s => ({ stringValue: s });
+    const createRequest = email => commit([{ update: { name: nm('requests/' + uid()), fields: { email: sv(String(email).toLowerCase()), status: sv('pending') } }, updateTransforms: [{ fieldPath: 'createdAt', setToServerValue: 'REQUEST_TIME' }], currentDocument: { exists: false } }]);
+    const deleteRequest = id => commit([{ delete: nm('requests/' + (id || uid())) }]);
+    const approve = (id, email) => commit([{ update: { name: nm('members/' + id), fields: { email: sv(email) } }, updateTransforms: [{ fieldPath: 'approvedAt', setToServerValue: 'REQUEST_TIME' }] }, { delete: nm('requests/' + id) }]);
+    const reject = id => commit([{ update: { name: nm('requests/' + id), fields: { status: sv('rejected') } }, updateMask: { fieldPaths: ['status'] } }]);
+    const removeMember = id => commit([{ delete: nm('members/' + id) }]);
+    /* Renueva el token para que traiga el correo ya verificado (lo que miran las reglas) */
+    const refresh = async () => { idToken = null; exp = 0; return token(); };
+    return { getDoc, listDocs, createRequest, deleteRequest, approve, reject, removeMember, refresh, signIn, signUp, sendVerification, resetPassword, verified, signOut: () => { idToken = null; exp = 0; o.auth.set(null); }, push, pull, token };
   }
 
   A.syncFirebase = { create, parseConfig, cmpTs, HOSTS };

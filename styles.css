@@ -96,6 +96,9 @@ a { color: var(--brand); }
 .modal { width: 100%; max-width: 440px; max-height: 90vh; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
 .modal .txt { margin-bottom: 10px; }
 .lock { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 16px; overflow: auto; }
+.ac-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ac-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+.ac-row:first-child { border-top: 0; }
 .lock-box { width: 100%; max-width: 320px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .lock-box .ico { width: 36px; height: 36px; color: var(--brand); }
 .dots { display: flex; gap: 12px; height: 18px; }

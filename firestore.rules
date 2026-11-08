@@ -1,17 +1,18 @@
 rules_version = '2';
-// Cada cuenta lee y escribe solo lo suyo (users/{su uid}/records/*). Todo lo que no está permitido aquí queda prohibido.
-// Para escribir hay que tener el correo verificado (frena cuentas falsas); el dueño de la app queda exento por si su cuenta se creó a mano.
-// Cambia el correo del dueño si usas otro.
+// Acceso por aprobación: cualquiera puede crear su cuenta y pedir acceso, pero solo las cuentas aprobadas por el administrador
+// (documento members/{uid}) pueden leer y escribir sus datos (users/{su uid}/records/*). Todo lo no permitido aquí queda prohibido.
+// El administrador es quien tiene el correo de abajo (cámbialo si usas otro). Su cuenta no necesita estar en members.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function owner(uid) {
-      return request.auth != null && request.auth.uid == uid
-        && (request.auth.token.email_verified == true || request.auth.token.email == 'felipe.gonzalezg01@gmail.com');
-    }
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.email == 'felipe.gonzalezg01@gmail.com'; }
+    function isMember(uid) { return exists(/databases/$(database)/documents/members/$(uid)); }
+    function canUse(uid) { return signedIn() && request.auth.uid == uid && (isAdmin() || isMember(uid)); }
+
     // users/{uid}/records/{tipo__id}: un documento por registro
     match /users/{uid}/records/{key} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if owner(uid)
+      allow read: if canUse(uid);
+      allow create, update: if canUse(uid)
         && request.resource.data.keys().hasOnly(['t', 'd', 'u', 'del', 'at'])
         && request.resource.data.keys().hasAll(['t', 'd', 'u', 'at'])
         && request.resource.data.t in ['profile', 'weight', 'steps', 'measure', 'goal', 'food', 'meal', 'nutriday', 'exercise', 'plan', 'session']
@@ -21,6 +22,34 @@ service cloud.firestore {
         && (!('del' in request.resource.data) || request.resource.data.del is bool)
         && key.size() <= 160;
       allow delete: if false;
+    }
+
+    // Cuentas aprobadas. Solo las crea el administrador; cada persona puede ver la suya.
+    match /members/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['email', 'approvedAt'])
+        && request.resource.data.email is string && request.resource.data.email.size() <= 200
+        && request.resource.data.approvedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
+    // Solicitudes de acceso: cada persona crea la suya (con su correo ya verificado y la hora del servidor).
+    match /requests/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'status', 'createdAt'])
+        && request.auth.token.email_verified == true
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      // El administrador solo puede marcarla como rechazada (aprobar = crear el miembro y borrar la solicitud)
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status == 'rejected';
+      allow delete: if signedIn() && (request.auth.uid == uid || isAdmin());
     }
   }
 }

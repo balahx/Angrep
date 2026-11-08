@@ -51,6 +51,7 @@
       sec('halterofilia', 'Importar Halterofilia', 5),
       sec('apariencia', 'Apariencia', 1),
       sec('documentos', 'Documentos', 7, ['Cargar y descargar rutinas y planes (PDF o Excel)', 'Exportar a CSV y PDF']),
+      Object.assign(sec('accesos', 'Accesos', 9, ['Aprobar o quitar cuentas de la app']), { when: () => !!(A.cloud && A.cloud.isAdmin()) }),
       sec('sync', 'Sincronización', 8, ['Mantener PC e iPhone al día con Firebase', 'Funciona sin conexión y se pone al día al volver internet']),
       sec('acerca', 'Acerca de', 1)
     ] }
