@@ -39,7 +39,7 @@
     A.store.init();
     A.applyTheme();
     A.shell.mount(document.getElementById('app'));
-    A.lockUi.gate(() => { A.shell.start(); A.cloud.start(); });
+    A.loginGate.require(() => A.lockUi.gate(() => { A.shell.start(); A.cloud.start(); }));
     registerSW();
     A.photos.keepStorage();
     if (root.matchMedia) root.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', A.applyTheme);

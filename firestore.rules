@@ -1,14 +1,24 @@
 rules_version = '2';
+// Solo tu cuenta puede leer y escribir. Todo lo que no está permitido aquí queda prohibido.
+// Cambia el correo de abajo si usas otro. (Las cuentas nuevas creadas desde fuera de la app tampoco entran: se exige este correo.)
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Cada persona solo ve y escribe lo suyo: users/{su uid}/records/*
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid
+        && request.auth.token.email == 'felipe.gonzalezg01@gmail.com';
+    }
+    // users/{uid}/records/{tipo__id}: un documento por registro
     match /users/{uid}/records/{key} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
+      allow read: if owner(uid);
+      allow create, update: if owner(uid)
         && request.resource.data.keys().hasOnly(['t', 'd', 'u', 'del', 'at'])
+        && request.resource.data.keys().hasAll(['t', 'd', 'u', 'at'])
+        && request.resource.data.t in ['profile', 'weight', 'steps', 'measure', 'goal', 'food', 'meal', 'nutriday', 'exercise', 'plan', 'session']
         && request.resource.data.d is string && request.resource.data.d.size() < 200000
-        && request.resource.data.u is int
-        && request.resource.data.t is string;
+        && request.resource.data.u is int && request.resource.data.u <= request.time.toMillis() + 600000
+        && request.resource.data.at == request.time
+        && (!('del' in request.resource.data) || request.resource.data.del is bool)
+        && key.size() <= 160;
       allow delete: if false;
     }
   }
