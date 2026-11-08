@@ -1,15 +1,16 @@
 rules_version = '2';
-// Solo tu cuenta puede leer y escribir. Todo lo que no está permitido aquí queda prohibido.
-// Cambia el correo de abajo si usas otro. (Las cuentas nuevas creadas desde fuera de la app tampoco entran: se exige este correo.)
+// Cada cuenta lee y escribe solo lo suyo (users/{su uid}/records/*). Todo lo que no está permitido aquí queda prohibido.
+// Para escribir hay que tener el correo verificado (frena cuentas falsas); el dueño de la app queda exento por si su cuenta se creó a mano.
+// Cambia el correo del dueño si usas otro.
 service cloud.firestore {
   match /databases/{database}/documents {
     function owner(uid) {
       return request.auth != null && request.auth.uid == uid
-        && request.auth.token.email == 'felipe.gonzalezg01@gmail.com';
+        && (request.auth.token.email_verified == true || request.auth.token.email == 'felipe.gonzalezg01@gmail.com');
     }
     // users/{uid}/records/{tipo__id}: un documento por registro
     match /users/{uid}/records/{key} {
-      allow read: if owner(uid);
+      allow read: if request.auth != null && request.auth.uid == uid;
       allow create, update: if owner(uid)
         && request.resource.data.keys().hasOnly(['t', 'd', 'u', 'del', 'at'])
         && request.resource.data.keys().hasAll(['t', 'd', 'u', 'at'])

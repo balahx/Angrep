@@ -10,7 +10,7 @@
   const MSG = {
     EMAIL_NOT_FOUND: 'Correo o contraseña incorrectos.', INVALID_PASSWORD: 'Correo o contraseña incorrectos.', INVALID_LOGIN_CREDENTIALS: 'Correo o contraseña incorrectos.',
     USER_DISABLED: 'Esta cuenta está deshabilitada.', TOO_MANY_ATTEMPTS_TRY_LATER: 'Demasiados intentos. Espera unos minutos.', INVALID_EMAIL: 'El correo no es válido.',
-    API_KEY_INVALID: 'La apiKey no es válida. Revisa la configuración de Firebase.', 'API key not valid. Please pass a valid API key.': 'La apiKey no es válida. Revisa la configuración de Firebase.'
+    EMAIL_EXISTS: 'Ya existe una cuenta con ese correo. Usa «Entrar».', WEAK_PASSWORD: 'La contraseña es muy débil: usa al menos 8 caracteres.', OPERATION_NOT_ALLOWED: 'El registro con correo está desactivado en Firebase (Authentication → Método de acceso).', MISSING_PASSWORD: 'Escribe una contraseña.', API_KEY_INVALID: 'La apiKey no es válida. Revisa la configuración de Firebase.', 'API key not valid. Please pass a valid API key.': 'La apiKey no es válida. Revisa la configuración de Firebase.'
   };
   /* Compara dos marcas de tiempo de Firestore («2026-11-08T12:00:01.5Z», con fracción variable): -1, 0 o 1 */
   const cmpTs = (a, b) => { const sp = t => { const m = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d+))?Z$/.exec(String(t)); return m ? [Date.parse(m[1] + 'Z'), (m[2] || '').padEnd(9, '0')] : [0, '']; }, x = sp(a), y = sp(b);
@@ -36,7 +36,7 @@
     async function call(url, init) {
       let res; try { res = await f(url, init); } catch (e) { throw mkErr('offline', 'Sin conexión.'); }
       let body = null; try { body = await res.json(); } catch (e) { /* respuesta sin JSON */ }
-      if (!res.ok) { const raw = body && body.error && (body.error.message || body.error.status) || ''; const k = String(raw).split(' ')[0]; const msg = MSG[raw] || MSG[k] || (res.status === 403 ? 'Sin permiso en Firestore. Revisa las reglas.' : res.status === 404 ? 'No encuentro la base de datos Firestore del proyecto.' : 'Error ' + res.status + (raw ? ': ' + raw : '') + '.');
+      if (!res.ok) { const raw = body && body.error && (body.error.message || body.error.status) || ''; const k = String(raw).split(' ')[0]; const msg = MSG[raw] || MSG[k] || (res.status === 403 ? 'Sin permiso en Firestore. Verifica tu correo (revisa tu bandeja) o revisa las reglas.' : res.status === 404 ? 'No encuentro la base de datos Firestore del proyecto.' : 'Error ' + res.status + (raw ? ': ' + raw : '') + '.');
         throw Object.assign(mkErr(res.status === 401 || /TOKEN|CREDENTIAL|USER_NOT_FOUND/.test(raw) ? 'auth' : res.status === 403 ? 'rules' : 'http', msg), { status: res.status, raw: raw }); }
       return body;
     }
@@ -47,6 +47,16 @@
       idToken = r.idToken; exp = now() + (+r.expiresIn || 3600) * 1000; o.auth.set({ uid: r.localId, email: email, refresh: r.refreshToken });
       return { uid: r.localId, email: email };
     }
+    async function signUp(email, password) {
+      const r = await json(hosts.auth + '/v1/accounts:signUp?key=' + key, { email: email, password: password, returnSecureToken: true });
+      idToken = r.idToken; exp = now() + (+r.expiresIn || 3600) * 1000; o.auth.set({ uid: r.localId, email: email, refresh: r.refreshToken });
+      return { uid: r.localId, email: email };
+    }
+    async function sendVerification() { const t = await token(); await json(hosts.auth + '/v1/accounts:sendOobCode?key=' + key, { requestType: 'VERIFY_EMAIL', idToken: t }); }
+    /* Si el correo no existe se responde igual (no se revela qué correos tienen cuenta) */
+    async function resetPassword(email) { try { await json(hosts.auth + '/v1/accounts:sendOobCode?key=' + key, { requestType: 'PASSWORD_RESET', email: email }); } catch (e) { if (e.raw !== 'EMAIL_NOT_FOUND') throw e; } }
+    /* true / false; null si no se pudo saber (sin conexión) */
+    async function verified() { try { const t = await token(), r = await json(hosts.auth + '/v1/accounts:lookup?key=' + key, { idToken: t }); return !!(r.users && r.users[0] && r.users[0].emailVerified); } catch (e) { return null; } }
     async function token() {
       if (idToken && exp > now() + 60000) return idToken;
       const a = o.auth.get(); if (!a || !a.refresh) throw mkErr('auth', 'Inicia sesión para sincronizar.');
@@ -56,7 +66,7 @@
       return idToken;
     }
     const docs = () => 'projects/' + o.cfg.projectId + '/databases/(default)/documents';
-    const authed = async (url, body) => { const t = await token(); try { return await json(url, body, { Authorization: 'Bearer ' + t }); } catch (e) { if (e.status === 401) { idToken = null; exp = 0; const t2 = await token(); return json(url, body, { Authorization: 'Bearer ' + t2 }); } throw e; } };
+    const authed = async (url, body) => { const t = await token(); try { return await json(url, body, { Authorization: 'Bearer ' + t }); } catch (e) { if (e.status === 401 || e.status === 403) { idToken = null; exp = 0; const t2 = await token(); return json(url, body, { Authorization: 'Bearer ' + t2 }); } throw e; } };
     const uid = () => { const a = o.auth.get(); if (!a || !a.uid) throw mkErr('auth', 'Inicia sesión para sincronizar.'); return a.uid; };
 
     async function push(recs) {
@@ -78,7 +88,7 @@
       }
       return { records: out, cursor: maxAt };
     }
-    return { signIn, signOut: () => { idToken = null; exp = 0; o.auth.set(null); }, push, pull, token };
+    return { signIn, signUp, sendVerification, resetPassword, verified, signOut: () => { idToken = null; exp = 0; o.auth.set(null); }, push, pull, token };
   }
 
   A.syncFirebase = { create, parseConfig, cmpTs, HOSTS };

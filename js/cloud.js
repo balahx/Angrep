@@ -18,6 +18,14 @@
     setConfig(text) { const c = A.syncFirebase.parseConfig(text); store.setLocal({ syncCfg: c, syncAuth: null }); build(); return c; },
     clear() { store.setLocal({ syncCfg: null, syncAuth: null, sync: null }); engine = backend = null; },
     async signIn(email, pw) { if (!backend) build(); const r = await backend.signIn(String(email).trim(), pw); engine.bind(r.uid); return r; },
+    /* Cuenta nueva: crea, avisa por correo para verificar y deja la sesión iniciada */
+    async signUp(email, pw) { if (!backend) build(); const r = await backend.signUp(String(email).trim(), pw); engine.bind(r.uid); try { await backend.sendVerification(); } catch (e) { /* se puede reenviar después */ } return r; },
+    resetPassword(email) { if (!backend) build(); return backend.resetPassword(String(email).trim()); },
+    resendVerification() { if (!backend) build(); return backend.sendVerification(); },
+    verified() { return C.signedIn() ? (backend || (build(), backend)).verified() : Promise.resolve(null); },
+    /* Cuenta distinta a la que usó este dispositivo: sus datos locales son de otra persona */
+    prevUid: () => store.getLocal().syncOwner || (store.getLocal().sync || {}).uid || null,
+    switchAccount() { const l = store.getLocal(), keep = { syncCfg: l.syncCfg, syncAuth: l.syncAuth, syncLastEmail: l.syncLastEmail, sync: { uid: (l.syncAuth || {}).uid } }; store.wipe(); store.setLocal(keep); build(); },
     signOut() { if (backend) backend.signOut(); else setAuth(null); },
     async run() { if (!C.signedIn()) return { ok: false, code: 'auth', message: 'Inicia sesión para sincronizar.' }; if (!engine) build(); engine.bind(auth().uid); return engine.run(); },
     state: () => (engine ? engine.state() : (store.getLocal().sync || {})), pending: () => (C.signedIn() && engine ? engine.pending() : 0), running: () => !!(engine && engine.isRunning()),
