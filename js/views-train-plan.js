@@ -81,6 +81,7 @@
 
   /* ---------- Cardio y otras actividades ---------- */
   const ACTS = ['Caminata', 'Trote', 'Bicicleta', 'Natación', 'Elíptica', 'Fútbol', 'Otra'];
+  const paceTxt = p => { const m = Math.floor(p), sec = Math.round((p - m) * 60); return (sec === 60 ? m + 1 : m) + ':' + String(sec === 60 ? 0 : sec).padStart(2, '0'); };
   const cardio = () => store.list('session').filter(s => s.discipline === 'cardio');
   wrapView('entrenos/cardio/hoy', (el, again) => {
     const today = U.today(), dIn = dateInput('cd-date', today), act = h('select', { class: 'txt', id: 'cd-act' }, optionsOf(ACTS.map(a => [a, a]), 'Caminata')), other = h('input', { class: 'txt', id: 'cd-other', type: 'text', maxlength: 60, placeholder: 'Ej. Pádel' }), mins = numInput('cd-min', 'Ej. 40'), km = numInput('cd-km', 'Opcional'), kc = numInput('cd-kcal', 'Opcional'), rpe = numInput('cd-rpe', '0 a 10'), err = errBox();
@@ -99,13 +100,16 @@
     h('div', { class: 'grid2' }, field('cd-min', 'Duración (min)', mins), field('cd-km', 'Distancia (km)', km)), h('div', { class: 'grid2' }, field('cd-kcal', 'Kcal gastadas', kc, 'Si tu reloj las da'), field('cd-rpe', 'Esfuerzo (RPE)', rpe)), err,
     h('div', { class: 'row-end' }, h('button', { class: 'btn', type: 'submit' }, 'Guardar'))));
     const recent = cardio().sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 3);
-    if (recent.length) el.appendChild(h('section', { class: 'card' }, h('h3', { class: 'sub' }, 'Últimas actividades'), h('ul', { class: 'rows' }, recent.map(s => { const it = s.items[0], t = T.cardioTotals(s); return h('li', { class: 'row' }, h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, it.activity), h('span', { class: 'hint' }, U.fmtDate(s.date))), h('strong', null, t.minutes + ' min' + (t.km ? ' · ' + U.fmtNum(t.km, 1) + ' km' : ''))); }))));
+    if (recent.length) el.appendChild(h('section', { class: 'card' }, h('h3', { class: 'sub' }, 'Últimas actividades'), h('ul', { class: 'rows' }, recent.map(s => { const it = s.items[0], t = T.cardioTotals(s); return h('li', { class: 'row' }, h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, it.activity), h('span', { class: 'hint' }, U.fmtDate(s.date) + (t.km > 0 && t.minutes ? ' · ritmo ' + paceTxt(t.minutes / t.km) + ' /km' : ''))), h('strong', null, t.minutes + ' min' + (t.km ? ' · ' + U.fmtNum(t.km, 1) + ' km' : ''))); }))));
   });
   wrapView('entrenos/cardio/progreso', (el, again) => {
     const today = U.today(), ss = cardio();
     if (!ss.length) { el.appendChild(h('section', { class: 'card empty' }, h('h2', null, 'Sin datos todavía'), h('p', { class: 'muted' }, 'Registra una actividad para ver tu tiempo y distancia por semana.'), h('a', { class: 'btn', href: '#/entrenos/cardio/hoy' }, 'Registrar actividad'))); return; }
     const wk = T.cardioWeekly(ss, today), cur = wk.filter(w => w.week === T.weekOf(today))[0] || { minutes: 0, km: 0, sessions: 0, kcal: 0 }, last8 = wk.slice(-8);
     el.appendChild(tiles([tile('Esta semana', cur.minutes + ' min', cur.sessions + (cur.sessions === 1 ? ' actividad' : ' actividades')), tile('Distancia', U.fmtNum(cur.km, 1) + ' km', 'esta semana'), tile('Kcal gastadas', cur.kcal ? U.fmtNum(cur.kcal, 0) : '–', 'las que anotaste'), tile('Semana anterior', (wk[wk.length - 2] ? wk[wk.length - 2].minutes : 0) + ' min')]));
+    const grp = {}; ss.forEach(x => { const t = T.cardioTotals(x), a = (x.items[0] || {}).activity; if (a && t.km > 0 && t.minutes) (grp[a] = grp[a] || []).push({ date: x.date, p: t.minutes / t.km }); });
+    const best = Object.keys(grp).sort((a, b) => grp[b].length - grp[a].length)[0], gl = best && grp[best].length > 1 ? grp[best].sort((a, b) => a.date < b.date ? -1 : 1) : null;
+    if (gl) { const f = gl[0], l = gl[gl.length - 1], wks = Math.max(1, Math.round(U.daysBetween(f.date, l.date) / 7)); if (Math.abs(l.p - f.p) >= 0.05) el.appendChild(h('p', { class: 'coach-s' }, (l.p < f.p ? 'Bajaste' : 'Subiste') + ' el ritmo de ' + paceTxt(f.p) + ' a ' + paceTxt(l.p) + ' por km en ' + wks + (wks === 1 ? ' semana' : ' semanas') + ' (' + best + ').')); }
     const mk = (title, key, unit, d) => { const host = h('div'); el.appendChild(h('section', { class: 'card' }, h('h2', null, title), host)); A.charts.bars(host, { ariaLabel: 'Gráfico de columnas: ' + title.toLowerCase() + ', últimas ' + last8.length + ' semanas.', unit: unit, decimals: d, name: title, pts: last8.map(w => ({ label: U.fmtShort(w.week), y: w[key], tip: 'Semana del ' + U.fmtShort(w.week) + ' · ' + w.sessions + (w.sessions === 1 ? ' actividad' : ' actividades') })) }); };
     mk('Minutos por semana', 'minutes', 'min', 0); if (last8.some(w => w.km > 0)) mk('Distancia por semana', 'km', 'km', 1);
   });

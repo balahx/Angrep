@@ -298,3 +298,4 @@ a { color: var(--strong); }
 #upd-bar { position: fixed; left: 12px; right: 12px; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px); z-index: 1000; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 10px 18px; border-radius: 20px; background: var(--brand); color: var(--brand-ink); font-weight: 600; box-shadow: 0 6px 24px rgba(0, 0, 0, .25); }
 #upd-bar .btn { background: var(--brand-ink); color: #fff; border-color: var(--brand-ink); }
 @media (min-width: 1024px) { #upd-bar { left: auto; right: 24px; bottom: 24px; max-width: 420px; } }
+.coach-s { margin-bottom: 16px; }

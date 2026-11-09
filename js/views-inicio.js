@@ -42,7 +42,9 @@
     if (st) {
       wc.appendChild(tiles([tile('Último peso', U.fmtNum(st.last.value, 1) + ' kg', st.last.date === today ? 'de hoy' : U.fmtDate(st.last.date)), tile('Tendencia (7 d)', U.fmtNum(st.avg, 1) + ' kg', st.d7 == null ? 'aún sin comparar' : signed(st.d7, 1, 'kg') + ' en 7 días')]));
       const gm = store.get('goal', 'goal_main_weight');
-      if (gm) { const left = U.round(st.avg - gm.target, 1), dd = U.daysBetween(today, gm.targetDate); wc.appendChild(h('p', { class: 'muted' }, left === 0 || (gm.target < gm.startValue ? left <= 0 : left >= 0) ? '¡Llegaste a tu meta de ' + U.fmtNum(gm.target, 1) + ' kg!' : 'Te faltan ' + U.fmtNum(Math.abs(left), 1) + ' kg para ' + U.fmtNum(gm.target, 1) + ' kg' + (dd != null && dd > 0 ? ' (' + dd + ' días hasta tu fecha)' : dd != null ? ' (la fecha ya pasó)' : '') + '.')); }
+      if (gm) { const left = U.round(st.avg - gm.target, 1), dd = U.daysBetween(today, gm.targetDate), tot = Math.abs(gm.startValue - gm.target);
+        if (tot > 0) wc.appendChild(meter('Hacia la meta', Math.max(0, Math.min(tot, (gm.target < gm.startValue ? gm.startValue - st.avg : st.avg - gm.startValue))), tot, 'kg', 1, true));
+        wc.appendChild(h('p', { class: 'muted' }, left === 0 || (gm.target < gm.startValue ? left <= 0 : left >= 0) ? '¡Llegaste a tu meta de ' + U.fmtNum(gm.target, 1) + ' kg!' : 'Te faltan ' + U.fmtNum(Math.abs(left), 1) + ' kg para ' + U.fmtNum(gm.target, 1) + ' kg' + (dd != null && dd > 0 ? ' (' + dd + ' días hasta tu fecha). Necesitas ' + (gm.target < gm.startValue ? 'bajar ' : 'subir ') + U.fmtNum(Math.abs(left) / (dd / 7), 2) + ' kg por semana' : dd != null ? ' (la fecha ya pasó)' : '') + '.')); }
     } else wc.appendChild(h('p', { class: 'muted' }, 'Aún no hay pesos registrados.'));
     const pts = series.slice(-14).map(x => x.value).filter(v => typeof v === 'number');
     if (pts.length > 1) { const NS = 'http://www.w3.org/2000/svg', mn = Math.min.apply(null, pts), mx = Math.max.apply(null, pts), sp = document.createElementNS(NS, 'svg'), pl = document.createElementNS(NS, 'polyline');
@@ -85,7 +87,20 @@
     const sOk = stepGoal ? dates.filter(d => steps.some(r => r.date === d && r.count >= stepGoal)).length : null, wN = dates.filter(d => weights.some(w => w.date === d)).length;
     let planned = 0, done = 0, hasPlan = false; ['halterofilia', 'pesas'].forEach(d => { const plan = plans.filter(p => p.discipline === d)[0]; if (!K.plannedDays(plan).length) return; hasPlan = true; const w = K.weekStatus(plan, sessions.filter(s => s.discipline === d), week, today); planned += w.planned; done += w.done; });
     const totalSes = sessions.filter(s => s.date >= week && s.date <= today && s.discipline !== 'cardio').length, cardioMin = sessions.filter(s => s.discipline === 'cardio' && s.date >= week && s.date <= today).reduce((t, s) => t + T.cardioTotals(s).minutes, 0);
-    el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Esta semana'), tiles([
+    const left = [], names = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    ['halterofilia', 'pesas'].forEach(d => { const plan = plans.filter(p => p.discipline === d)[0]; if (!plan || !K.plannedDays(plan).length) return; K.weekStatus(plan, sessions.filter(s => s.discipline === d), week, today).days.forEach(x => { if (x.state === 'hoy' || x.state === 'pendiente') left.push(x); }); });
+    left.sort((a, b) => a.date < b.date ? -1 : 1);
+    const dn = x => x.state === 'hoy' ? 'hoy' : 'el ' + names[x.dow], list = left.map(dn), sentence = list.length ? 'Te queda' + (list.length > 1 ? 'n' : '') + ' ' + (list.length > 1 ? list.slice(0, -1).join(', ') + ' y ' + list[list.length - 1] : list[0]) + '.' : null;
+    /* Mes: promedio de lo que cumples contra lo que te propones */
+    const m1 = today.slice(0, 8) + '01', md = []; for (let d = m1; d <= today; d = U.ymd(U.addDays(U.parseYmd(d), 1))) md.push(d);
+    const parts = [['pesaje', md.filter(d => weights.some(w => w.date === d)).length / md.length]];
+    if (g.kcal) parts.push(['calorías', F.series(meals, nutri, m1, today).filter(x => F.dayStatus(x.total, g).ok).length / md.length]);
+    if (stepGoal) parts.push(['pasos', md.filter(d => steps.some(r => r.date === d && r.count >= stepGoal)).length / md.length]);
+    let mp = 0, mb = 0; ['halterofilia', 'pesas'].forEach(d => { const plan = plans.filter(p => p.discipline === d)[0]; if (!plan || !K.plannedDays(plan).length) return; const ws = K.weeks(plan, sessions.filter(s => s.discipline === d), today, 6).filter(w => w.week >= K.weekOf(m1)); ws.forEach(w => { mp += w.base; mb += Math.min(w.done, w.base); }); });
+    if (mp) parts.push(['entrenos', mb / mp]);
+    const pct = Math.round(100 * parts.reduce((t, x) => t + x[1], 0) / parts.length), worst = parts.slice().sort((a, b) => a[1] - b[1])[0];
+    el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Esta semana'),
+      h('p', { class: 'coach-s' }, (hasPlan ? 'Llevas ' + done + ' de ' + planned + ' sesiones. ' : '') + (sentence || '') + ' ' + 'Vas en ' + pct + ' % del mes' + (parts.length > 1 && worst[1] < 0.8 ? '; lo que más se te escapa es ' + worst[0] + '.' : '.')), tiles([
       tile('Pesajes', wN + ' de ' + dates.length, 'días con peso'), tile('Kcal en meta', kOk == null ? '–' : kOk + ' de ' + kLog, kOk == null ? 'sin objetivo' : 'días registrados'),
       tile('Pasos en meta', sOk == null ? '–' : sOk + ' de ' + dates.length, sOk == null ? 'sin meta' : 'días'), tile('Sesiones', hasPlan ? done + ' de ' + planned : String(totalSes), hasPlan ? 'planificadas' : 'de fuerza'), tile('Cardio y otros', cardioMin + ' min')])));
 
