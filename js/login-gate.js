@@ -12,7 +12,7 @@
   /* Muro de acceso: la cuenta tiene que estar aprobada por el administrador (members/{uid}). Se vuelve a mirar solo cada 15 s mientras espera. */
   const TXT = {
     checking: ['Comprobando tu acceso…', ''],
-    unverified: ['Falta verificar tu correo', 'Abre el enlace que te enviamos por correo (revisa también el spam) y luego toca «Ya lo verifiqué».'],
+    unverified: ['Falta verificar tu correo', 'Abre el enlace que te enviamos por correo (revisa también el spam) y luego toca «Ya lo verifiqué». Si el enlace dice que venció o que ya se usó, normalmente tu correo ya quedó verificado: solo toca «Ya lo verifiqué».'],
     pending: ['Solicitud enviada', 'Tu acceso tiene que ser aprobado por el administrador de la app. Esta pantalla se actualiza sola cuando lo apruebe.'],
     rejected: ['Acceso no aprobado', 'El administrador no aprobó esta solicitud. Puedes pedirlo de nuevo.'],
     offline: ['Sin conexión', 'Necesito internet para comprobar tu acceso, solo esta vez en este dispositivo.'],
