@@ -36,8 +36,8 @@
       if (C.isAdmin()) return ok();
       try {
         if (await backend.getDoc('members/' + a.uid)) return ok();
-        const v = await backend.verified(); if (v === null) return { state: C.cachedOk() ? 'ok' : 'offline' };
-        if (!v) return no('unverified');
+        const u = await backend.lookup(); if (!u) return { state: 'error', message: 'Firebase no encuentra esta cuenta. Cierra sesión y vuelve a entrar.' };
+        if (!u.emailVerified) { const x = no('unverified'); x.message = 'Abre el enlace que te enviamos por correo (revisa también el spam) y luego toca «Ya lo verifiqué». Firebase todavía registra «' + u.email + '» como no verificado (' + new Date().toLocaleTimeString('es-CL') + ').'; return x; }
         const r = await backend.getDoc('requests/' + a.uid);
         if (!r) { await backend.refresh(); await backend.createRequest(a.email); return no('pending'); }
         return no(r.status === 'rejected' ? 'rejected' : 'pending');

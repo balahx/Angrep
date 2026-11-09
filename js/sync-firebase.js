@@ -58,6 +58,8 @@
     async function resetPassword(email) { try { await json(hosts.auth + '/v1/accounts:sendOobCode?key=' + key, { requestType: 'PASSWORD_RESET', email: email }); } catch (e) { if (e.raw !== 'EMAIL_NOT_FOUND') throw e; } }
     /* true / false; null si no se pudo saber (sin conexión) */
     async function verified() { try { const t = await token(), r = await json(hosts.auth + '/v1/accounts:lookup?key=' + key, { idToken: t }); return !!(r.users && r.users[0] && r.users[0].emailVerified); } catch (e) { return null; } }
+    /* Datos de la cuenta según Firebase (lanza el error real si falla); pide un token nuevo para no depender de uno viejo */
+    async function lookup() { idToken = null; exp = 0; const t = await token(), r = await json(hosts.auth + '/v1/accounts:lookup?key=' + key, { idToken: t }); return (r.users && r.users[0]) || null; }
     async function token() {
       if (idToken && exp > now() + 60000) return idToken;
       const a = o.auth.get(); if (!a || !a.refresh) throw mkErr('auth', 'Inicia sesión para sincronizar.');
@@ -114,7 +116,7 @@
     const removeMember = id => commit([{ delete: nm('members/' + id) }]);
     /* Renueva el token para que traiga el correo ya verificado (lo que miran las reglas) */
     const refresh = async () => { idToken = null; exp = 0; return token(); };
-    return { getDoc, listDocs, createRequest, deleteRequest, approve, reject, removeMember, refresh, signIn, signUp, sendVerification, resetPassword, verified, signOut: () => { idToken = null; exp = 0; o.auth.set(null); }, push, pull, token, diagnose };
+    return { getDoc, listDocs, createRequest, deleteRequest, approve, reject, removeMember, refresh, signIn, signUp, sendVerification, resetPassword, verified, lookup, signOut: () => { idToken = null; exp = 0; o.auth.set(null); }, push, pull, token, diagnose };
   }
 
   A.syncFirebase = { create, parseConfig, cmpTs, HOSTS };

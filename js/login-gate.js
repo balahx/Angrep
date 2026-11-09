@@ -37,7 +37,11 @@
       if (r.state === 'ok') { close(); if (fresh) A.ui.toast('Cuenta aprobada. ¡Bienvenido!'); then(); return; }
       draw(r.state, r.message); clearInterval(timer); timer = (r.state === 'pending' || r.state === 'unverified') ? setInterval(check, 15000) : null;
     };
-    async function check() { apply(await A.cloud.access()); }
+    let checking = false;
+    async function check() {
+      if (checking) return; checking = true; const b = document.getElementById('wl-check'); if (b) { b.disabled = true; b.textContent = 'Comprobando…'; }
+      try { apply(await A.cloud.access()); } catch (e) { apply({ state: 'error', message: e && e.message }); } finally { checking = false; }
+    }
     draw('checking'); check();
   }
   /* Con la app ya abierta: si el administrador quitó el acceso, vuelve el muro */
