@@ -11,10 +11,12 @@
     if (m) m.setAttribute('content', getComputedStyle(r).getPropertyValue('--bg').trim() || '#f4f6f8');
   };
 
-  let reg = null;
+  let reg = null, applying = false;
   function registerSW() {
     if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
-    navigator.serviceWorker.register('sw.js').then(r => { reg = r; }).catch(() => { /* sin sw: la app sigue funcionando, solo sin caché */ });
+    const had = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !applying) A.update.banner(); });
+    navigator.serviceWorker.register('sw.js').then(r => { reg = r; r.update().catch(() => {}); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') r.update().catch(() => {}); }); }).catch(() => { /* sin sw: la app sigue funcionando, solo sin caché */ });
   }
   /* Actualizaciones: compara con version.js de la red (nunca de la caché). La cuenta y los datos no se tocan. */
   A.update = {
@@ -22,16 +24,24 @@
       try {
         const res = await fetch('version.js?c=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) throw new Error('http ' + res.status);
-        const m = /n:\s*'([^']+)'/.exec(await res.text());
+        const txt = await res.text(), m = /n:\s*'([^']+)'/.exec(txt);
         if (!m) throw new Error('formato');
-        return { remote: m[1], newer: A.util.cmpVersion(m[1], A.version.n) > 0 };
+        const vm = /v:\s*'([^']+)'/.exec(txt), lv = (A.version || {}).v;
+        return { remote: m[1] + (vm ? ' (' + vm[1] + ')' : ''), newer: A.util.cmpVersion(m[1], A.version.n) > 0 || (A.util.cmpVersion(m[1], A.version.n) === 0 && !!vm && vm[1] !== lv) };
       } catch (e) { return { error: 'No se pudo comprobar (¿sin conexión?).' }; }
     },
     async apply() {
+      applying = true;
       if (!reg) { location.reload(); return; }
       navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
-      await reg.update();
+      try { await reg.update(); } catch (e) { /* sin red: se recarga igual */ }
       if (reg.waiting) reg.waiting.postMessage('skipWaiting'); else location.reload();
+    },
+    /* Aviso fijo: la versión nueva ya está lista; recargar no pierde datos (todo se guarda al momento) */
+    banner() {
+      if (document.getElementById('upd-bar')) return;
+      const b = A.ui.h('div', { id: 'upd-bar', role: 'status' }, A.ui.h('span', null, 'Hay una versión nueva de Angrep.'), A.ui.h('button', { class: 'btn sm', type: 'button', onclick: () => location.reload() }, 'Actualizar'));
+      document.body.appendChild(b);
     }
   };
 
