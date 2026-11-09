@@ -74,10 +74,10 @@
   /* Programa las vueltas solas: al cambiar datos (con pausa), al volver la conexión, al volver a la app y cada 5 minutos */
   function autoStart(runFn, store, env) {
     env = env || root; let timer = null;
-    const soon = ms => { clearTimeout(timer); timer = setTimeout(() => { if (store.getLocal().syncAuto !== false && (env.navigator ? env.navigator.onLine !== false : true)) runFn(); }, ms); };
-    store.on(e => { if (e.type === 'local' || e.type === 'merge' || e.type === 'wipe') return; soon(4000); });
+    const soon = ms => { clearTimeout(timer); timer = setTimeout(() => { if ((env.navigator ? env.navigator.onLine !== false : true)) runFn(); }, ms); };
+    store.on(e => { if (e.type === 'local' || e.type === 'merge' || e.type === 'wipe') return; soon(2000); });
     if (env.addEventListener) { env.addEventListener('online', () => soon(500)); env.document && env.document.addEventListener('visibilitychange', () => { if (env.document.visibilityState === 'visible') soon(800); }); }
-    setInterval(() => soon(100), 5 * 60000); soon(1500);
+    setInterval(() => soon(100), 2 * 60000); soon(800);
   }
 
   A.sync = { create, autoStart, keyOf, splitKey };

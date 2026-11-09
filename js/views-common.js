@@ -6,7 +6,7 @@
 
   const signed = (v, d, unit) => v == null ? '–' : (v > 0 ? '+' : v < 0 ? '−' : '') + U.fmtNum(Math.abs(v), d == null ? 1 : d) + (unit ? ' ' + unit : '');
   const longDate = s => { const d = U.parseYmd(s); return d ? U.fmtDate(s) + ' ' + d.getFullYear() : s; };
-  const tile = (label, value, sub) => h('div', { class: 'tile' }, h('span', { class: 'tile-l' }, label), h('strong', { class: 'tile-v' }, value), sub ? h('span', { class: 'tile-s' }, sub) : null);
+  const tile = (label, value, sub) => h('div', { class: 'tile' + (String(value).length > 16 ? ' wide' : '') }, h('span', { class: 'tile-l' }, label), h('strong', { class: 'tile-v' + (String(value).length > 11 ? ' long' : '') }, value), sub ? h('span', { class: 'tile-s' }, sub) : null);
   const tiles = arr => h('div', { class: 'tiles' }, arr);
   const rerender = el => { if (A.shell.key && A.shell.key !== el.__key) return; A.charts.destroyAll(); el.innerHTML = ''; V[el.__key](el); };
   const wrapView = (key, fn) => { V[key] = el => { el.__key = key; fn(el, () => rerender(el)); }; };
