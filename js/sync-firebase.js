@@ -36,7 +36,7 @@
     async function call(url, init) {
       let res; try { res = await f(url, init); } catch (e) { throw mkErr('offline', 'Sin conexión.'); }
       let body = null; try { body = await res.json(); } catch (e) { /* respuesta sin JSON */ }
-      if (!res.ok) { const raw = body && body.error && (body.error.message || body.error.status) || ''; const k = String(raw).split(' ')[0]; const msg0 = MSG[raw] || MSG[k] || (res.status === 403 ? 'Sin permiso en Firestore. Verifica tu correo (revisa tu bandeja) o revisa las reglas.' : res.status === 404 ? 'No encuentro la base de datos Firestore del proyecto.' : 'Error ' + res.status + (raw ? ': ' + raw : '') + '.');
+      if (!res.ok) { const raw = body && body.error && (body.error.message || body.error.status) || ''; const k = String(raw).split(' ')[0]; const msg0 = MSG[raw] || MSG[k] || (res.status === 403 ? 'Sin permiso en Firestore: tu acceso puede no estar aprobado todavía o las reglas no están publicadas.' : res.status === 404 ? 'No encuentro la base de datos Firestore del proyecto.' : 'Error ' + res.status + (raw ? ': ' + raw : '') + '.');
       const msg = msg0 + (MSG[raw] || MSG[k] ? '' : ' [' + (url.indexOf('securetoken') >= 0 ? 'token' : url.indexOf('identitytoolkit') >= 0 ? 'cuentas' : 'firestore') + ' ' + res.status + (raw ? ' · ' + String(raw).replace(/\s+/g, ' ').slice(0, 200) : '') + ']');
         throw Object.assign(mkErr(res.status === 401 || /TOKEN|CREDENTIAL|USER_NOT_FOUND/.test(raw) ? 'auth' : res.status === 403 ? 'rules' : 'http', msg), { status: res.status, raw: raw }); }
       return body;
