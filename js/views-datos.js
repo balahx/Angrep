@@ -126,7 +126,8 @@
       out.textContent = 'Buscando…';
       const r = await A.update.check();
       out.textContent = r.error ? r.error : r.newer ? 'Hay una versión nueva (' + r.remote + ').' : 'Ya tienes la última versión.';
-      if (r.newer) { btn.appendChild(h('button', { class: 'btn', type: 'button', onclick: () => A.update.apply() }, 'Actualizar ahora')); }
+      const old = btn.querySelector('.upd-go'); if (old) old.remove();
+      if (r.newer) { btn.appendChild(h('button', { class: 'btn upd-go', type: 'button', onclick: e => { e.currentTarget.disabled = true; e.currentTarget.textContent = 'Actualizando…'; out.textContent = 'Actualizando, un momento…'; A.update.apply(); } }, 'Actualizar ahora')); }
     } }, 'Buscar actualización'));
     el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Acerca de'),
       h('dl', { class: 'kv' }, h('dt', null, 'Versión'), h('dd', null, (v.n || '–') + (v.v ? ' · compilación ' + v.v : '')), h('dt', null, 'Almacenamiento'), h('dd', null, st.ok ? st.adapter + ' (ok)' : 'Sin espacio'),

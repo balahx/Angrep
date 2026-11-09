@@ -1,3 +1,8 @@
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: local('Inter Regular'), url('fonts/Inter-Regular.woff') format('woff'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: local('Inter Medium'), url('fonts/Inter-Medium.woff') format('woff'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: local('Inter SemiBold'), url('fonts/Inter-SemiBold.woff') format('woff'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 700; font-display: swap; src: local('Inter Bold'), url('fonts/Inter-Bold.woff') format('woff'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 800; font-display: swap; src: local('Inter ExtraBold'), url('fonts/Inter-ExtraBold.woff') format('woff'); }
 /* Estilos de Angrep. Diseño definitivo (paleta A: turquesa frío + oro, ver claude/decisiones-de-diseno.md): los colores salen de las variables de :root.
    En modo claro la marca (--brand) y el oro (--accent) solo van como relleno con tinta oscura encima; el texto y las líneas de color usan --strong y --accent-text.
    Controles táctiles de 44 px o más y campos de 16 px o más (iOS no acerca la pantalla al tocarlos). */
@@ -8,7 +13,7 @@
   --brand: #1FC8B4; --brand-ink: #04211E; --strong: #0A7468; --accent: #F2B63C; --accent-ink: #241800; --accent-text: #8A5A00;
   --danger: #B3392F; --ok: #0A7468; --warn-bg: #FDF3D6;
   --radius: 24px; --r-field: 16px; --r-sheet: 28px; --nav-h: 76px; --side-w: 248px;
-  --font: system-ui, -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {

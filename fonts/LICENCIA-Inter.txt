@@ -1,0 +1,2 @@
+Inter © The Inter Project Authors (https://github.com/rsms/inter), licencia SIL Open Font License 1.1 (https://openfontlicense.org).
+Subconjunto latino incluido en esta carpeta para que funcione sin conexión.

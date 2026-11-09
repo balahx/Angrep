@@ -16,7 +16,7 @@
     if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
     const had = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !applying) A.update.banner(); });
-    navigator.serviceWorker.register('sw.js').then(r => { reg = r; r.update().catch(() => {}); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') r.update().catch(() => {}); }); }).catch(() => { /* sin sw: la app sigue funcionando, solo sin caché */ });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => { reg = r; r.update().catch(() => {}); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') r.update().catch(() => {}); }); }).catch(() => { /* sin sw: la app sigue funcionando, solo sin caché */ });
   }
   /* Actualizaciones: compara con version.js de la red (nunca de la caché). La cuenta y los datos no se tocan. */
   A.update = {
@@ -35,7 +35,10 @@
       if (!reg) { location.reload(); return; }
       navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
       try { await reg.update(); } catch (e) { /* sin red: se recarga igual */ }
-      if (reg.waiting) reg.waiting.postMessage('skipWaiting'); else location.reload();
+      if (reg.waiting) reg.waiting.postMessage('skipWaiting');
+      const w = reg.installing || reg.waiting;
+      if (w && w.state !== 'activated') await new Promise(res => { const t = setTimeout(res, 20000); w.addEventListener('statechange', () => { if (w.state === 'activated') { clearTimeout(t); res(); } }); if (reg.waiting) reg.waiting.postMessage('skipWaiting'); });
+      location.reload();
     },
     /* Aviso fijo: la versión nueva ya está lista; recargar no pierde datos (todo se guarda al momento) */
     banner() {
