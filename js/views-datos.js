@@ -129,7 +129,7 @@
       if (r.newer) { btn.appendChild(h('button', { class: 'btn', type: 'button', onclick: () => A.update.apply() }, 'Actualizar ahora')); }
     } }, 'Buscar actualización'));
     el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Acerca de'),
-      h('dl', { class: 'kv' }, h('dt', null, 'Versión'), h('dd', null, v.n || '–'), h('dt', null, 'Almacenamiento'), h('dd', null, st.ok ? st.adapter + ' (ok)' : 'Sin espacio'),
+      h('dl', { class: 'kv' }, h('dt', null, 'Versión'), h('dd', null, (v.n || '–') + (v.v ? ' · compilación ' + v.v : '')), h('dt', null, 'Almacenamiento'), h('dd', null, st.ok ? st.adapter + ' (ok)' : 'Sin espacio'),
         h('dt', null, 'Dispositivo'), h('dd', null, String(loc.deviceId).slice(0, 8))),
       st.corrupt ? h('p', { class: 'note warn' }, 'Se encontró un dato dañado y se apartó. Importa tu último respaldo si falta algo.') : null,
       out, btn,

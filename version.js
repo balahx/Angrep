@@ -1,1 +1,1 @@
-(function (r) { r.APP_VERSION = { n: '0.9.0', v: '2026.11.09.4' }; })(typeof self !== 'undefined' ? self : this);
+(function (r) { r.APP_VERSION = { n: '0.9.1', v: '2026.11.09.5' }; })(typeof self !== 'undefined' ? self : this);
