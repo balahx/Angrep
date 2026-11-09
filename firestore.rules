@@ -35,13 +35,12 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Solicitudes de acceso: cada persona crea la suya (con su correo ya verificado y la hora del servidor).
+    // Solicitudes de acceso: cada persona crea la suya (con su correo y la hora del servidor). El administrador decide a quién aprobar.
     match /requests/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
       allow list: if isAdmin();
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['email', 'status', 'createdAt'])
-        && request.auth.token.email_verified == true
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt == request.time;

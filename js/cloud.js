@@ -36,11 +36,12 @@
       if (C.isAdmin()) return ok();
       try {
         if (await backend.getDoc('members/' + a.uid)) return ok();
-        const u = await backend.lookup(); if (!u) return { state: 'error', message: 'Firebase no encuentra esta cuenta. Cierra sesión y vuelve a entrar.' };
-        if (!u.emailVerified) { const x = no('unverified'); x.message = 'Abre el enlace que te enviamos por correo (revisa también el spam) y luego toca «Ya lo verifiqué». Firebase todavía registra «' + u.email + '» como no verificado (' + new Date().toLocaleTimeString('es-CL') + ').'; return x; }
         const r = await backend.getDoc('requests/' + a.uid);
-        if (!r) { await backend.refresh(); await backend.createRequest(a.email); return no('pending'); }
-        return no(r.status === 'rejected' ? 'rejected' : 'pending');
+        if (r) return no(r.status === 'rejected' ? 'rejected' : 'pending');
+        const u = await backend.lookup(); if (!u) return { state: 'error', message: 'Firebase no encuentra esta cuenta. Cierra sesión y vuelve a entrar.' };
+        /* La solicitud se crea aunque el correo no esté verificado (el administrador decide); si las reglas publicadas todavía lo exigen, se pide verificar */
+        try { await backend.createRequest(a.email); return no('pending'); }
+        catch (e) { if (e && e.status === 403 && !u.emailVerified) { const x = no('unverified'); x.message = 'Abre el enlace que te enviamos por correo (revisa también el spam) y luego toca «Ya lo verifiqué». Firebase todavía registra «' + u.email + '» como no verificado (' + new Date().toLocaleTimeString('es-CL') + ').'; return x; } throw e; }
       } catch (e) { if (e && e.code === 'offline') return { state: C.cachedOk() ? 'ok' : 'offline' }; if (e && e.code === 'auth') return { state: 'error', message: e.message }; return { state: 'error', message: e && e.message || 'No se pudo comprobar tu acceso.' }; }
     },
     async askAgain() { if (!backend) build(); try { await backend.deleteRequest(); } catch (e) { /* ya no estaba */ } return C.access(); },
