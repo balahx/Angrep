@@ -40,7 +40,7 @@
       regDate = null; A.ui.toast('Peso guardado.' + extra); again();
     } },
     h('h2', null, 'Registrar peso'),
-    field('w-date', 'Fecha', date), field('w-kg', 'Peso (kg)', kg, 'Se acepta coma o punto.'), field('w-note', 'Nota', note), hint,
+    field('w-date', 'Fecha', date), field('w-kg', 'Peso (kg)', A.wheel.attach(kg, { min: 20, max: 300, unit: 'kg', title: 'Peso', start: (st && st.last.value) || 70 }), 'Se acepta coma o punto.'), field('w-note', 'Nota', note), hint,
     h('details', { class: 'more' }, h('summary', null, 'Agregar una foto (opcional)'), field('w-photo', 'Foto', file, 'Se guarda solo en este dispositivo. También puedes agregarla después en Medidas y fotos.'), field('w-tag', 'Tipo', tag)),
     err, h('div', { class: 'row-end' }, btn)));
     sync();

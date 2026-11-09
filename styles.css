@@ -277,3 +277,17 @@ a { color: var(--strong); }
 .list-sec { padding: 12px 0; border-top: 1px solid var(--line); }
 .list-sec:first-of-type { border-top: 0; }
 .list-sec h3 { margin: 0 0 4px; font-size: 1rem; }
+
+/* Rueda de números */
+.wheel-wrap { display: flex; gap: 8px; align-items: stretch; }
+.wheel-wrap .txt { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
+.wheel-btn { flex: none; width: 52px; min-height: 52px; padding: 0; font-size: 1.2rem; }
+.setwheel { min-width: 44px; padding: 0 6px; }
+.wheels { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; margin: 4px 0 12px; }
+.wheel { flex: 1 1 0; height: 220px; overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none; text-align: center; border-radius: 16px; outline-offset: 2px; overscroll-behavior: contain; position: relative; z-index: 1; }
+.wheel::-webkit-scrollbar { display: none; }
+.wheel-pad { height: 88px; }
+.wheel-it { height: 44px; line-height: 44px; scroll-snap-align: center; font-size: 1.15rem; color: var(--muted); cursor: pointer; }
+.wheel-it.on { color: var(--text); font-weight: 800; font-size: 1.5rem; }
+.wheel-sep { font-weight: 800; font-size: 1.5rem; position: relative; z-index: 2; }
+.wheel-band { position: absolute; left: 0; right: 0; top: 88px; height: 44px; border-radius: 14px; background: color-mix(in srgb, var(--brand) 18%, transparent); pointer-events: none; z-index: 0; }

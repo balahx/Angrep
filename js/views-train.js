@@ -53,7 +53,7 @@
               again(); } }, s.done ? '✓' : '○');
           kg.addEventListener('input', () => { const v = U.parseNum(kg.value); s.kg = v == null ? null : v; save(); });
           reps.addEventListener('input', () => { const v = U.parseNum(reps.value); s.reps = v == null ? null : Math.round(v); save(); });
-          rows.appendChild(h('div', { class: 'set' }, h('span', { class: 'set-n' }, String(si + 1)), kg, h('span', { class: 'muted' }, 'kg ×'), reps,
+          rows.appendChild(h('div', { class: 'set' }, h('span', { class: 'set-n' }, String(si + 1)), kg, A.wheel.setPicker(kg, reps, it.name), reps,
             ok, h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Quitar serie ' + (si + 1), onclick: () => { it.sets.splice(si, 1); save(); again(); } }, '×')));
         });
         const hist = T.history(sessionsOf(disc), T.key(it)), sug = hist.length ? T.suggestNext(hist, it.reps) : null, last = hist[hist.length - 1];
