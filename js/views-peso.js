@@ -264,7 +264,8 @@
     el.appendChild(sum);
 
     /* Objetivos cortos */
-    const every = h('select', { class: 'txt', id: 'ms-every' }, [[7, 'Cada semana'], [14, 'Cada 2 semanas'], [28, 'Cada 4 semanas']].map(o => h('option', { value: o[0], selected: o[0] === 14 }, o[1])));
+    const lastEvery = +(store.getLocal().msEvery) || 14;
+    const every = h('select', { class: 'txt', id: 'ms-every', onchange: () => store.setLocal({ msEvery: +every.value }) }, [[7, 'Cada semana'], [14, 'Cada 2 semanas'], [28, 'Cada 4 semanas']].map(o => h('option', { value: o[0], selected: o[0] === lastEvery }, o[1])));
     const old = store.list('goal').filter(x => x.parentId === 'goal_main_weight').sort((a, b) => a.targetDate < b.targetDate ? -1 : 1), tr = C.trend(series);
     const gen = h('button', { class: 'btn', type: 'button', onclick: async () => {
       if (!rate) { A.ui.toast('Primero actualiza la fecha del objetivo.'); return; }
