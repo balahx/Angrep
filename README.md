@@ -62,3 +62,11 @@ Sube la versión en `version.js` (`n` visible y `v` con fecha). Sin eso nadie ve
 3. **Authentication → Configuración → Dominios autorizados:** agregar `balahx.github.io`.
 4. **Authentication → Método de acceso:** «Correo/contraseña» activado (permite crear cuentas desde la app). Para dejar de aceptar registros nuevos, desactiva el registro de usuarios (requiere Identity Platform) o publica unas reglas más cerradas.
 5. **Cuota:** el plan gratuito de Firestore alcanza de sobra para pocas personas; revisa Uso en la consola de vez en cuando.
+
+
+## Plan del entrenador (fase 9)
+- **Administrador:** Ajustes y datos → *Plan del entrenador*: cargas el Excel (planilla del entrenador o plantilla simple), revisas la vista previa y publicas. La lectura usa `js/xlsx-lite.js` (sin librerías) y `js/plan-import.js` (el mismo lector de la app Halterofilia).
+- **Quién lo ve:** Ajustes y datos → *Accesos* → casilla «Plan del entrenador» en cada cuenta. El administrador siempre lo ve. Reglas en `firestore.rules` (`canPlan`): publica de nuevo las reglas tras actualizar.
+- **Firebase:** 2 documentos, `config/plan` (versión, chico) y `plans/data` (el plan comprimido, ~20 KB). Cada dispositivo lo baja una vez y lo guarda; solo vuelve a leer si cambia la versión (máx. una comprobación cada 6 horas). Sin conexión se sigue viendo la copia guardada. Si se quita el acceso, la copia se borra cuando la app vuelve a comprobarlo.
+- **Cuentas con acceso:** Entrenamientos → Halterofilia → *Entrenador*: eliges etapa y semana, ves los kilos con tus máximos y puedes usar la semana como tu rutina.
+- Prueba: `node tests/e2e-plan.js`.

@@ -27,6 +27,7 @@
       { id: 'halterofilia', label: 'Halterofilia', sections: [
         sec('hoy', 'Sesión', 4, ['Sesión en vivo con temporizador de descanso', 'Registro rápido después de entrenar']),
         sec('plan', 'Plan', 4, ['Seguir la planificación semanal', 'Kilos desde tus máximos']),
+        Object.assign(sec('entrenador', 'Entrenador', 9, ['Plan anual del entrenador por semana']), { when: () => !!(A.cloud && A.cloud.canPlan()) }),
         sec('progreso', 'Progreso', 4, ['Máximos, 1RM estimado y récords', 'Tonelaje, volumen, RPE y carga']),
         sec('cumplimiento', 'Cumplimiento', 6, ['Sesiones hechas vs planificadas']),
         sec('historial', 'Historial', 4, ['Sesiones anteriores', 'Importar desde la app Halterofilia (fase 5)'])
@@ -51,6 +52,7 @@
       sec('halterofilia', 'Importar Halterofilia', 5),
       sec('apariencia', 'Apariencia', 1),
       sec('documentos', 'Documentos', 7, ['Cargar y descargar rutinas y planes (PDF o Excel)', 'Exportar a CSV y PDF']),
+      Object.assign(sec('plan-entrenador', 'Plan del entrenador', 9, ['Cargar el Excel del plan anual y publicarlo']), { when: () => !!(A.cloud && A.cloud.isAdmin()) }),
       Object.assign(sec('accesos', 'Accesos', 9, ['Aprobar o quitar cuentas de la app']), { when: () => !!(A.cloud && A.cloud.isAdmin()) }),
       sec('sync', 'Sincronización', 8, ['Mantener PC e iPhone al día con Firebase', 'Funciona sin conexión y se pone al día al volver internet']),
       sec('acerca', 'Acerca de', 1)

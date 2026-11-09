@@ -7,6 +7,8 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function isAdmin() { return signedIn() && request.auth.token.email == 'felipe.gonzalezg01@gmail.com'; }
     function isMember(uid) { return exists(/databases/$(database)/documents/members/$(uid)); }
+    // Plan del entrenador: lo ve el administrador y las cuentas aprobadas a las que el administrador les activó «plan» en members/{uid}.
+    function canPlan() { return signedIn() && (isAdmin() || (exists(/databases/$(database)/documents/members/$(request.auth.uid)) && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.get('plan', false) == true)); }
     function canUse(uid) { return signedIn() && request.auth.uid == uid && (isAdmin() || isMember(uid)); }
 
     // users/{uid}/records/{tipo__id}: un documento por registro
@@ -24,14 +26,40 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Plan del entrenador: config/plan (versión, chico) y plans/data (el plan comprimido). Solo el administrador escribe.
+    match /config/plan {
+      allow get: if canPlan();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['ver', 'name', 'weeks', 'at'])
+        && request.resource.data.ver is string && request.resource.data.ver.size() <= 40
+        && request.resource.data.name is string && request.resource.data.name.size() <= 120
+        && request.resource.data.weeks is int
+        && request.resource.data.at == request.time;
+      allow delete: if isAdmin();
+    }
+    match /plans/data {
+      allow get: if canPlan();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['z', 'ver'])
+        && request.resource.data.z is string && request.resource.data.z.size() < 900000
+        && request.resource.data.ver is string && request.resource.data.ver.size() <= 40;
+      allow delete: if isAdmin();
+    }
+
     // Cuentas aprobadas. Solo las crea el administrador; cada persona puede ver la suya.
     match /members/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
       allow list: if isAdmin();
-      allow create, update: if isAdmin()
-        && request.resource.data.keys().hasOnly(['email', 'approvedAt'])
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['email', 'approvedAt', 'plan'])
         && request.resource.data.email is string && request.resource.data.email.size() <= 200
-        && request.resource.data.approvedAt == request.time;
+        && request.resource.data.approvedAt == request.time
+        && (!('plan' in request.resource.data) || request.resource.data.plan is bool);
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['email', 'approvedAt', 'plan'])
+        && request.resource.data.email is string && request.resource.data.email.size() <= 200
+        && (request.resource.data.approvedAt == request.time || request.resource.data.approvedAt == resource.data.approvedAt)
+        && (!('plan' in request.resource.data) || request.resource.data.plan is bool);
       allow delete: if isAdmin();
     }
 

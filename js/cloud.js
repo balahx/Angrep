@@ -32,10 +32,10 @@
     /* Estado del acceso: ok | unverified | pending | rejected | offline | error */
     async access() {
       const a = auth(); if (!a) return { state: 'error', message: 'Inicia sesión.' }; if (!backend) build();
-      const ok = () => { store.setLocal({ syncAccess: { uid: a.uid, ok: true } }); return { state: 'ok' }; }, no = st => { store.setLocal({ syncAccess: { uid: a.uid, ok: false } }); return { state: st }; };
-      if (C.isAdmin()) return ok();
+      const ok = pl => { store.setLocal({ syncAccess: { uid: a.uid, ok: true, plan: !!pl } }); setTimeout(() => { if (A.coach) A.coach.refresh().catch(() => {}); }, 0); return { state: 'ok' }; }, no = st => { store.setLocal({ syncAccess: { uid: a.uid, ok: false } }); if (A.coach) A.coach.clear(); return { state: st }; };
+      if (C.isAdmin()) return ok(true);
       try {
-        if (await backend.getDoc('members/' + a.uid)) return ok();
+        const mem = await backend.getDoc('members/' + a.uid); if (mem) return ok(mem.plan === true);
         const r = await backend.getDoc('requests/' + a.uid);
         if (r) return no(r.status === 'rejected' ? 'rejected' : 'pending');
         const u = await backend.lookup(); if (!u) return { state: 'error', message: 'Firebase no encuentra esta cuenta. Cierra sesión y vuelve a entrar.' };
@@ -47,10 +47,19 @@
     async askAgain() { if (!backend) build(); try { await backend.deleteRequest(); } catch (e) { /* ya no estaba */ } return C.access(); },
     admin: {
       async list() { if (!backend) build(); const r = await Promise.all([backend.listDocs('requests'), backend.listDocs('members')]); return { requests: r[0], members: r[1] }; },
+      setPlanAccess: (id, on) => backend.setMemberPlan(id, on),
       approve: (id, email) => backend.approve(id, email), reject: id => backend.reject(id), remove: id => backend.removeMember(id), dismiss: id => backend.deleteRequest(id)
     },
     signOut() { if (backend) backend.signOut(); else setAuth(null); store.setLocal({ syncAccess: null }); },
     async diagnose() { if (!C.signedIn()) return [{ paso: 'Sesión', ok: false, detalle: 'Inicia sesión primero.' }]; if (!backend) build(); return backend.diagnose(); },
+    /* ¿Puede ver el plan del entrenador? (el administrador siempre; los demás si el administrador se lo dio) */
+    canPlan() { const s = store.getLocal().syncAccess, a = auth(); return !!(C.signedIn() && a && (C.isAdmin() || (s && s.uid === a.uid && s.ok && s.plan))); },
+    plan: {
+      meta: async () => { if (!backend) build(); return backend.getDoc('config/plan'); },
+      data: async () => { if (!backend) build(); return backend.getDoc('plans/data'); },
+      publish: async (meta, z) => { if (!backend) build(); return backend.setPlan(meta, z); },
+      remove: async () => { if (!backend) build(); return backend.deletePlan(); }
+    },
     async run() { if (!C.signedIn()) return { ok: false, code: 'auth', message: 'Inicia sesión para sincronizar.' }; if (!engine) build(); engine.bind(auth().uid); return engine.run(); },
     state: () => (engine ? engine.state() : (store.getLocal().sync || {})), pending: () => (C.signedIn() && engine ? engine.pending() : 0), running: () => !!(engine && engine.isRunning()),
     start() { if (started) return; started = true; seed(); build(); A.sync.autoStart(() => { if (C.signedIn()) C.run(); }, store); }

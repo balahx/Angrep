@@ -114,9 +114,15 @@
     const approve = (id, email) => commit([{ update: { name: nm('members/' + id), fields: { email: sv(email) } }, updateTransforms: [{ fieldPath: 'approvedAt', setToServerValue: 'REQUEST_TIME' }] }, { delete: nm('requests/' + id) }]);
     const reject = id => commit([{ update: { name: nm('requests/' + id), fields: { status: sv('rejected') } }, updateMask: { fieldPaths: ['status'] } }]);
     const removeMember = id => commit([{ delete: nm('members/' + id) }]);
+    /* Plan del entrenador: un documento chico con la versión (config/plan) y otro con el plan comprimido (plans/data) */
+    const setPlan = (meta, z) => commit([
+      { update: { name: nm('config/plan'), fields: { ver: sv(meta.ver), name: sv(meta.name), weeks: { integerValue: String(meta.weeks) } } }, updateTransforms: [{ fieldPath: 'at', setToServerValue: 'REQUEST_TIME' }] },
+      { update: { name: nm('plans/data'), fields: { z: sv(z), ver: sv(meta.ver) } } }]);
+    const deletePlan = () => commit([{ delete: nm('config/plan') }, { delete: nm('plans/data') }]);
+    const setMemberPlan = (id, on) => commit([{ update: { name: nm('members/' + id), fields: { plan: { booleanValue: !!on } } }, updateMask: { fieldPaths: ['plan'] }, currentDocument: { exists: true } }]);
     /* Renueva el token para que traiga el correo ya verificado (lo que miran las reglas) */
     const refresh = async () => { idToken = null; exp = 0; return token(); };
-    return { getDoc, listDocs, createRequest, deleteRequest, approve, reject, removeMember, refresh, signIn, signUp, sendVerification, resetPassword, verified, lookup, signOut: () => { idToken = null; exp = 0; o.auth.set(null); }, push, pull, token, diagnose };
+    return { getDoc, listDocs, createRequest, deleteRequest, approve, reject, removeMember, setPlan, deletePlan, setMemberPlan, refresh, signIn, signUp, sendVerification, resetPassword, verified, lookup, signOut: () => { idToken = null; exp = 0; o.auth.set(null); }, push, pull, token, diagnose };
   }
 
   A.syncFirebase = { create, parseConfig, cmpTs, HOSTS };
