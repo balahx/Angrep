@@ -36,7 +36,8 @@
     async function call(url, init) {
       let res; try { res = await f(url, init); } catch (e) { throw mkErr('offline', 'Sin conexión.'); }
       let body = null; try { body = await res.json(); } catch (e) { /* respuesta sin JSON */ }
-      if (!res.ok) { const raw = body && body.error && (body.error.message || body.error.status) || ''; const k = String(raw).split(' ')[0]; const msg = MSG[raw] || MSG[k] || (res.status === 403 ? 'Sin permiso en Firestore. Verifica tu correo (revisa tu bandeja) o revisa las reglas.' : res.status === 404 ? 'No encuentro la base de datos Firestore del proyecto.' : 'Error ' + res.status + (raw ? ': ' + raw : '') + '.');
+      if (!res.ok) { const raw = body && body.error && (body.error.message || body.error.status) || ''; const k = String(raw).split(' ')[0]; const msg0 = MSG[raw] || MSG[k] || (res.status === 403 ? 'Sin permiso en Firestore. Verifica tu correo (revisa tu bandeja) o revisa las reglas.' : res.status === 404 ? 'No encuentro la base de datos Firestore del proyecto.' : 'Error ' + res.status + (raw ? ': ' + raw : '') + '.');
+      const msg = msg0 + (MSG[raw] || MSG[k] ? '' : ' [' + (url.indexOf('securetoken') >= 0 ? 'token' : url.indexOf('identitytoolkit') >= 0 ? 'cuentas' : 'firestore') + ' ' + res.status + (raw ? ' · ' + String(raw).replace(/\s+/g, ' ').slice(0, 200) : '') + ']');
         throw Object.assign(mkErr(res.status === 401 || /TOKEN|CREDENTIAL|USER_NOT_FOUND/.test(raw) ? 'auth' : res.status === 403 ? 'rules' : 'http', msg), { status: res.status, raw: raw }); }
       return body;
     }
@@ -93,6 +94,17 @@
     const flat = d => { const f = d.fields || {}, out = { id: String(d.name || '').split('/').pop() }; Object.keys(f).forEach(k => { const v = f[k]; out[k] = v.stringValue !== undefined ? v.stringValue : v.integerValue !== undefined ? +v.integerValue : v.booleanValue !== undefined ? v.booleanValue : v.timestampValue; }); return out; };
     async function getDoc(path) { try { return flat(await authed(hosts.db + '/v1/' + docs() + '/' + path, null, 'GET')); } catch (e) { if (e.status === 404) return null; throw e; } }
     async function listDocs(col) { const rows = await authed(hosts.db + '/v1/' + docs() + ':runQuery', { structuredQuery: { from: [{ collectionId: col }], limit: 500 } }); return (rows || []).filter(r => r.document).map(r => flat(r.document)); }
+    /* Prueba paso a paso y devuelve [{ paso, ok, detalle }] para ver dónde falla (sin dejar datos) */
+    async function diagnose() {
+      const out = [], step = async (n, fn) => { try { out.push({ paso: n, ok: true, detalle: (await fn()) || 'bien' }); return true; } catch (e) { out.push({ paso: n, ok: false, detalle: e && e.message || String(e) }); return false; } };
+      let t = null;
+      if (!await step('1. Sesión y renovación del token (Token Service API)', async () => { idToken = null; exp = 0; t = await token(); return 'bien'; })) return out;
+      await step('2. Estado de tu cuenta (Identity Toolkit API)', async () => { const r = await json(hosts.auth + '/v1/accounts:lookup?key=' + key, { idToken: t }), u = r.users && r.users[0]; return u ? (u.email + (u.emailVerified ? ' · correo verificado' : ' · CORREO SIN VERIFICAR')) : 'sin datos'; });
+      await step('3. Tu acceso aprobado (members/' + uid() + ')', async () => { try { await authed(hosts.db + '/v1/' + docs() + '/members/' + uid(), null, 'GET'); return 'aprobado'; } catch (e) { if (e.status === 404) return 'sin documento de miembro (si eres el administrador no hace falta)'; throw e; } });
+      await step('4. Leer tus registros (Cloud Firestore API + reglas)', async () => { const r = await authed(hosts.db + '/v1/' + docs() + '/users/' + uid() + ':runQuery', { structuredQuery: { from: [{ collectionId: 'records' }], limit: 1 } }); return 'bien (' + ((r || []).filter(x => x.document).length ? 'hay datos' : 'aún vacío') + ')'; });
+      await step('5. Escribir un registro de prueba (reglas de escritura)', async () => { const bs = docs() + '/users/' + uid() + '/records/'; await authed(hosts.db + '/v1/' + docs() + ':commit', { writes: [{ update: { name: bs + 'weight__diagnostico', fields: { t: { stringValue: 'weight' }, d: { stringValue: '{}' }, u: { integerValue: '0' }, del: { booleanValue: true } } }, updateTransforms: [{ fieldPath: 'at', setToServerValue: 'REQUEST_TIME' }] }] }); return 'bien'; });
+      return out;
+    }
     const commit = writes => authed(hosts.db + '/v1/' + docs() + ':commit', { writes: writes });
     const nm = p => docs() + '/' + p, sv = s => ({ stringValue: s });
     const createRequest = email => commit([{ update: { name: nm('requests/' + uid()), fields: { email: sv(String(email).toLowerCase()), status: sv('pending') } }, updateTransforms: [{ fieldPath: 'createdAt', setToServerValue: 'REQUEST_TIME' }], currentDocument: { exists: false } }]);
@@ -102,7 +114,7 @@
     const removeMember = id => commit([{ delete: nm('members/' + id) }]);
     /* Renueva el token para que traiga el correo ya verificado (lo que miran las reglas) */
     const refresh = async () => { idToken = null; exp = 0; return token(); };
-    return { getDoc, listDocs, createRequest, deleteRequest, approve, reject, removeMember, refresh, signIn, signUp, sendVerification, resetPassword, verified, signOut: () => { idToken = null; exp = 0; o.auth.set(null); }, push, pull, token };
+    return { getDoc, listDocs, createRequest, deleteRequest, approve, reject, removeMember, refresh, signIn, signUp, sendVerification, resetPassword, verified, signOut: () => { idToken = null; exp = 0; o.auth.set(null); }, push, pull, token, diagnose };
   }
 
   A.syncFirebase = { create, parseConfig, cmpTs, HOSTS };

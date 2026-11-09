@@ -49,6 +49,7 @@
       approve: (id, email) => backend.approve(id, email), reject: id => backend.reject(id), remove: id => backend.removeMember(id), dismiss: id => backend.deleteRequest(id)
     },
     signOut() { if (backend) backend.signOut(); else setAuth(null); store.setLocal({ syncAccess: null }); },
+    async diagnose() { if (!C.signedIn()) return [{ paso: 'Sesión', ok: false, detalle: 'Inicia sesión primero.' }]; if (!backend) build(); return backend.diagnose(); },
     async run() { if (!C.signedIn()) return { ok: false, code: 'auth', message: 'Inicia sesión para sincronizar.' }; if (!engine) build(); engine.bind(auth().uid); return engine.run(); },
     state: () => (engine ? engine.state() : (store.getLocal().sync || {})), pending: () => (C.signedIn() && engine ? engine.pending() : 0), running: () => !!(engine && engine.isRunning()),
     start() { if (started) return; started = true; seed(); build(); A.sync.autoStart(() => { if (C.signedIn()) C.run(); }, store); }
