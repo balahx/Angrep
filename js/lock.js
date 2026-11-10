@@ -19,8 +19,10 @@
   const same = (a, b) => { if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
   const normCode = c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   function makeCode() {
-    const a = root.crypto.getRandomValues(new Uint8Array(12));
-    let s = ''; a.forEach(b => { s += ALPHA[b % ALPHA.length]; });
+    /* Muestreo por rechazo: se descartan los bytes que darían más peso a unos caracteres (256 no es múltiplo de ALPHA.length). */
+    const lim = 256 - (256 % ALPHA.length);
+    let s = '';
+    while (s.length < 12) root.crypto.getRandomValues(new Uint8Array(24)).forEach(b => { if (b < lim && s.length < 12) s += ALPHA[b % ALPHA.length]; });
     return s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8, 12);
   }
   const lockState = () => store.getLocal().lock;
