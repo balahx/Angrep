@@ -9,6 +9,8 @@
   const kgText = (v, d) => U.fmtNum(v, d == null ? 1 : d) + ' kg';
   const goalMain = () => store.get('goal', 'goal_main_weight');
   const cur = series => { const st = C.stats(series); return st ? st : null; };
+  const shortGoals = () => store.list('goal').filter(x => x.parentId === 'goal_main_weight').sort((a, b) => a.targetDate < b.targetDate ? -1 : 1);
+  const MS = { logrado: ['✓', 'Logrado'], nocumplido: ['✕', 'No cumplido'], tarde: ['✓', 'Logrado (tarde)'], pendiente: ['○', 'Pendiente'], vencido: ['!', 'No logrado'] };
 
   /* ---------- Peso · Registro ---------- */
   let regShown = 30, regDate = null;
@@ -16,6 +18,7 @@
     const series = C.weightSeries(store.list('weight')), st = cur(series), byDate = {};
     series.forEach(p => { byDate[p.date] = p; });
     const recs = {}; store.list('weight').forEach(r => { recs[r.date] = r; });
+    const msBy = {}; shortGoals().forEach(m => { msBy[m.targetDate] = m; });
     el.appendChild(tiles([
       tile('Último peso', st ? kgText(st.last.value) : '–', st ? U.fmtDate(st.last.date) : 'Sin registros'),
       tile('Tendencia (7 días)', st ? kgText(st.avg) : '–', 'Promedio de la última semana'),
@@ -27,7 +30,7 @@
     const file = h('input', { class: 'file', id: 'w-photo', type: 'file', accept: 'image/*' });
     const hint = h('p', { class: 'hint' }), err = errBox();
     const btn = h('button', { class: 'btn', type: 'submit' }, 'Guardar');
-    const sync = () => { const r = recs[date.value]; if (r) { kg.value = String(r.kg).replace('.', ','); note.value = r.note || ''; } hint.textContent = r ? 'Ya hay un peso para este día: al guardar se actualiza.' : ''; btn.textContent = r ? 'Actualizar' : 'Guardar'; };
+    const sync = () => { const r = recs[date.value]; if (r) { kg.value = String(r.kg).replace('.', ','); note.value = r.note || ''; } const m = msBy[date.value]; hint.textContent = [r ? 'Ya hay un peso para este día: al guardar se actualiza.' : '', m ? 'Este día tiene un objetivo corto de ' + kgText(m.target) + ': al guardar se marca como logrado o no cumplido.' : ''].filter(Boolean).join(' '); btn.textContent = r ? 'Actualizar' : 'Guardar'; };
     date.addEventListener('change', () => { regDate = date.value; sync(); });
     el.appendChild(h('form', { class: 'card form', novalidate: true, onsubmit: async e => {
       e.preventDefault(); err.textContent = '';
@@ -37,7 +40,9 @@
       try { store.save('weight', { date: date.value, kg: U.round(v, 2), note: note.value.trim() }); } catch (x) { err.textContent = /peso/.test(x.message) ? 'El peso debe estar entre 20 y 400 kg.' : x.message; return; }
       let extra = '';
       if (file.files && file.files[0]) { try { await A.photos.add(file.files[0], { date: date.value, tag: tag.value }); extra = ' Foto guardada en este dispositivo.'; } catch (x) { extra = ' La foto no se guardó: ' + x.message; } }
-      regDate = null; A.ui.toast('Peso guardado.' + extra); again();
+      const md = msBy[date.value] ? C.milestoneDay(msBy[date.value], U.round(v, 2)) : null;
+      const msMsg = !md ? '' : md.state === 'logrado' ? ' ¡Objetivo corto de ' + kgText(msBy[date.value].target) + ' logrado!' : ' Objetivo corto de ' + kgText(msBy[date.value].target) + ' no cumplido (por ' + kgText(Math.abs(md.diff), Math.abs(md.diff) < 0.1 ? 2 : 1) + ').';
+      regDate = null; A.ui.toast('Peso guardado.' + msMsg + extra); again();
     } },
     h('h2', null, 'Registrar peso'),
     field('w-date', 'Fecha', date), field('w-kg', 'Peso (kg)', A.wheel.attach(kg, { min: 20, max: 300, unit: 'kg', title: 'Peso', start: (st && st.last.value) || 70 }), 'Se acepta coma o punto.'), field('w-note', 'Nota', note), hint,
@@ -49,9 +54,10 @@
     const rows = series.slice().reverse().slice(0, regShown);
     const list = h('ul', { class: 'rows', 'aria-label': 'Pesos registrados' });
     rows.forEach(p => {
-      const i = series.indexOf(p), prev = i > 0 ? series[i - 1] : null, r = recs[p.date];
+      const i = series.indexOf(p), prev = i > 0 ? series[i - 1] : null, r = recs[p.date], md = msBy[p.date] ? C.milestoneDay(msBy[p.date], p.value) : null;
       list.appendChild(h('li', { class: 'row' },
-        h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, U.fmtDate(p.date)), r && r.note ? h('span', { class: 'hint' }, r.note) : null),
+        h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, U.fmtDate(p.date)), r && r.note ? h('span', { class: 'hint' }, r.note) : null,
+          md ? h('span', { class: 'status ' + md.state }, MS[md.state][0] + ' Objetivo ' + kgText(msBy[p.date].target) + ': ' + MS[md.state][1].toLowerCase()) : null),
         h('strong', null, kgText(p.value)), h('span', { class: 'delta' }, prev ? signed(U.round(p.value - prev.value, 2), 1) : ''),
         h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Editar ' + U.fmtDate(p.date), onclick: () => { date.value = p.date; regDate = p.date; sync(); kg.focus(); date.scrollIntoView({ block: 'center' }); } }, 'Editar'),
         h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Eliminar ' + U.fmtDate(p.date), onclick: () => removeWithUndo('weight', r, () => store.save('weight', { date: r.date, kg: r.kg, note: r.note }), again) }, 'Eliminar')));
@@ -266,7 +272,7 @@
     /* Objetivos cortos */
     const lastEvery = +(store.getLocal().msEvery) || 14;
     const every = h('select', { class: 'txt', id: 'ms-every', onchange: () => store.setLocal({ msEvery: +every.value }) }, [[7, 'Cada semana'], [14, 'Cada 2 semanas'], [28, 'Cada 4 semanas']].map(o => h('option', { value: o[0], selected: o[0] === lastEvery }, o[1])));
-    const old = store.list('goal').filter(x => x.parentId === 'goal_main_weight').sort((a, b) => a.targetDate < b.targetDate ? -1 : 1), tr = C.trend(series);
+    const old = shortGoals(), tr = C.trend(series);
     const gen = h('button', { class: 'btn', type: 'button', onclick: async () => {
       if (!rate) { A.ui.toast('Primero actualiza la fecha del objetivo.'); return; }
       if (old.length && !(await A.ui.confirm('¿Reemplazar los objetivos cortos?', 'Se borran los actuales y se crean otros desde hoy hasta tu meta.', 'Reemplazar'))) return;
@@ -274,11 +280,11 @@
       C.milestones(now, g.target, today, g.targetDate, +every.value).forEach(m => store.save('goal', { kind: 'weight', target: m.target, targetDate: m.targetDate, startDate: today, startValue: U.round(now, 1), parentId: 'goal_main_weight' }));
       A.ui.toast('Objetivos cortos creados.'); again();
     } }, old.length ? 'Volver a generar' : 'Generar objetivos cortos');
-    const ST = { logrado: ['✓', 'Logrado'], tarde: ['✓', 'Logrado (tarde)'], pendiente: ['○', 'Pendiente'], vencido: ['!', 'No logrado'] };
-    const ul = h('ul', { class: 'rows', 'aria-label': 'Objetivos cortos' }, old.map(m => { const s = C.milestoneStatus(m, tr, today), l = ST[s.state];
-      return h('li', { class: 'row' }, h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, kgText(m.target)), h('span', { class: 'hint' }, 'para el ' + longDate(m.targetDate))), h('span', { class: 'status ' + s.state }, l[0] + ' ' + l[1]),
+    const ST = MS;
+    const ul = h('ul', { class: 'rows', 'aria-label': 'Objetivos cortos' }, old.map(m => { const s = C.milestoneStatus(m, tr, today, series), l = ST[s.state];
+      return h('li', { class: 'row' }, h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, kgText(m.target)), h('span', { class: 'hint' }, 'para el ' + longDate(m.targetDate) + (s.byDay ? ' · pesaste ' + kgText(s.kg) : ''))), h('span', { class: 'status ' + s.state }, l[0] + ' ' + l[1]),
         h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Eliminar objetivo de ' + kgText(m.target), onclick: () => removeWithUndo('goal', m, () => store.save('goal', m), again) }, 'Eliminar')); }));
-    el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Objetivos cortos'), h('p', { class: 'muted' }, 'Puntos intermedios en línea recta desde hoy hasta tu meta. Se evalúan con tu tendencia de 7 días.'),
+    el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Objetivos cortos'), h('p', { class: 'muted' }, 'Puntos intermedios en línea recta desde hoy hasta tu meta. Si registras tu peso justo en el día del objetivo, ese peso lo marca como logrado o no cumplido; si ese día no te pesas, se evalúa con tu tendencia de 7 días.'),
       field('ms-every', 'Frecuencia', every), h('div', { class: 'row-end' }, gen), old.length ? ul : null));
   });
 })(window);

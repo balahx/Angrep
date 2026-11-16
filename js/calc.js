@@ -81,9 +81,17 @@
     out.push({ targetDate: targetDate, target: target });
     return out;
   }
-  /* Estado de un objetivo corto: logrado | tarde | pendiente | vencido (se mira la tendencia desde que se creó) */
-  function milestoneStatus(m, tr, today) {
-    const loss = m.target < m.startValue;
+  /* Objetivo corto contra el peso registrado en su día: logrado | nocumplido (diff = kg respecto del objetivo) */
+  function milestoneDay(m, kg) {
+    if (kg == null) return null;
+    const loss = m.target < m.startValue, ok = loss ? kg <= m.target : kg >= m.target;
+    return { state: ok ? 'logrado' : 'nocumplido', date: m.targetDate, kg: kg, diff: U.round(kg - m.target, 2), byDay: true };
+  }
+  /* Estado de un objetivo corto: logrado | nocumplido | tarde | pendiente | vencido.
+     Si hay un peso registrado justo en su día (series = weightSeries), ese peso decide; si no, se mira la tendencia desde que se creó. */
+  function milestoneStatus(m, tr, today, series) {
+    const loss = m.target < m.startValue, day = series ? series.filter(p => p.date === m.targetDate)[0] : null;
+    if (day) return milestoneDay(m, day.value);
     const hit = tr.filter(p => p.date >= m.startDate && p.date <= today).filter(p => loss ? p.avg <= m.target : p.avg >= m.target)[0];
     if (hit) return { state: hit.date <= m.targetDate ? 'logrado' : 'tarde', date: hit.date };
     return { state: today > m.targetDate ? 'vencido' : 'pendiente' };
@@ -103,6 +111,6 @@
     return { streak: streak, best: best, pct30: goal ? Math.round(m30 / 30 * 100) : null, avg7: w.length ? Math.round(w.reduce((a, b) => a + b, 0) / w.length) : null, metToday: met(today) };
   }
 
-  A.calc = { KCAL_PER_KG, weightSeries, trend, trendAt, stats, fit, projection, requiredRate, monthly, byDayOfMonth, prevMonth, milestones, milestoneStatus, stepsStats };
+  A.calc = { KCAL_PER_KG, weightSeries, trend, trendAt, stats, fit, projection, requiredRate, monthly, byDayOfMonth, prevMonth, milestones, milestoneDay, milestoneStatus, stepsStats };
   if (typeof module !== 'undefined' && module.exports) module.exports = A.calc;
 })(typeof window !== 'undefined' ? window : globalThis);
