@@ -17,7 +17,7 @@
     const today = U.today(), ws = store.list('weight'), series = C.weightSeries(ws), tr = C.trend(series);
     if (!ws.length) { el.appendChild(h('section', { class: 'card empty' }, h('h2', null, 'Aún no hay pesos'), h('p', { class: 'muted' }, 'El cumplimiento muestra tu constancia al pesarte, los pasos y los objetivos cortos.'), h('a', { class: 'btn', href: '#/peso/registro' }, 'Registrar peso'))); return; }
     const ls = K.logStreak(ws.map(w => w.date), today), gs = store.get('goal', 'goal_steps'), ss = C.stepsStats(store.list('steps'), gs ? gs.target : null, today);
-    const ms = store.list('goal').filter(x => x.parentId === 'goal_main_weight').sort((a, b) => a.targetDate < b.targetDate ? -1 : 1), st = ms.map(m => C.milestoneStatus(m, tr, today).state), hit = st.filter(x => x === 'logrado' || x === 'tarde').length;
+    const ms = store.list('goal').filter(x => x.parentId === 'goal_main_weight').sort((a, b) => a.targetDate < b.targetDate ? -1 : 1), st = ms.map(m => C.milestoneStatus(m, tr, today, series).state), hit = st.filter(x => x === 'logrado' || x === 'tarde').length;
     el.appendChild(tiles([tile('Racha de pesaje', ls.streak + (ls.streak === 1 ? ' día' : ' días'), 'mejor: ' + ls.best), tile('Días con peso', ls.n30 + ' de 30', ls.pct30 + ' %'),
       tile('Objetivos cortos', ms.length ? hit + ' de ' + ms.length : '–', ms.length ? 'logrados' : 'sin objetivos'), tile('Pasos en meta', ss.pct30 == null ? '–' : ss.pct30 + ' %', gs ? 'racha ' + ss.streak + (ss.streak === 1 ? ' día' : ' días') : 'sin meta de pasos')]));
     const days = []; for (let i = 29; i >= 0; i--) days.push(back(i));

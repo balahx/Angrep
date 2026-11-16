@@ -31,7 +31,7 @@ Código: `js/schema.js` (reglas) y `js/store.js` (almacén). Todo se guarda prim
 | `importlog` (local) | `source`, `at`, `summary` | Bitácora de importaciones. |
 
 ## Cómo usa la fase 2 estos registros
-- `goal` principal de peso: id fijo `goal_main_weight` (`kind: weight`, `target`, `targetDate`, `startDate`, `startValue`). Meta de pasos: id `goal_steps` (`kind: steps`, `target`). Objetivos cortos: `kind: weight` con `parentId: goal_main_weight`; se generan en línea recta desde hoy hasta la meta (cada 7, 14 o 28 días, máx. 26) y se evalúan con la tendencia de 7 días.
+- `goal` principal de peso: id fijo `goal_main_weight` (`kind: weight`, `target`, `targetDate`, `startDate`, `startValue`). Meta de pasos: id `goal_steps` (`kind: steps`, `target`). Objetivos cortos: `kind: weight` con `parentId: goal_main_weight`; se generan en línea recta desde hoy hasta la meta (cada 7, 14 o 28 días, máx. 26) y se evalúan así: si hay un peso registrado justo en la fecha del objetivo, ese peso decide (logrado o no cumplido); si no, se usa la tendencia de 7 días. El estado se calcula al mostrarlo, no se guarda.
 - `measure`: un registro por día y zona (guardar de nuevo el mismo día y zona actualiza).
 - `photo`: la imagen vive en IndexedDB (`appseg-files`/`blobs`, JPEG máx. 1280 px) y el registro guarda solo `blobKey`; no entra al respaldo ni se sincroniza.
 - Cálculos que no se guardan: promedio de 7 días, ajuste lineal de 28 días (mínimo 5 pesos en 14 días), proyección, ritmo necesario (7.700 kcal ≈ 1 kg), rachas.

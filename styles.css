@@ -151,7 +151,7 @@ a { color: var(--strong); }
 .sub { font-size: 1rem; margin: 16px 0 6px; }
 .status { font-size: .85rem; font-weight: 600; padding: 3px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); white-space: nowrap; }
 .status.logrado, .status.tarde { border-color: var(--ok); }
-.status.vencido { border-color: var(--danger); }
+.status.vencido, .status.nocumplido { border-color: var(--danger); }
 .btn[href] { display: inline-flex; align-items: center; text-decoration: none; }
 
 /* ---- Gráficos (colores = fichas de datos; claro y oscuro) ---- */
