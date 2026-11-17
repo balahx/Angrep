@@ -13,7 +13,9 @@
   const MS = { logrado: ['✓', 'Logrado'], nocumplido: ['✕', 'No cumplido'], tarde: ['✓', 'Logrado (tarde)'], pendiente: ['○', 'Pendiente'], vencido: ['!', 'No logrado'] };
 
   /* ---------- Peso · Registro ---------- */
-  let regShown = 30, regDate = null;
+  let weeksShown = 8, regDate = null;
+  const openWeeks = {};   /* semanas abiertas o cerradas a mano (se recuerda mientras la app esté abierta) */
+  const mondayOf = d => U.ymd(U.mondayOf(U.parseYmd(d)));
   wrapView('peso/registro', (el, again) => {
     const series = C.weightSeries(store.list('weight')), st = cur(series), byDate = {};
     series.forEach(p => { byDate[p.date] = p; });
@@ -42,6 +44,7 @@
       if (file.files && file.files[0]) { try { await A.photos.add(file.files[0], { date: date.value, tag: tag.value }); extra = ' Foto guardada en este dispositivo.'; } catch (x) { extra = ' La foto no se guardó: ' + x.message; } }
       const md = msBy[date.value] ? C.milestoneDay(msBy[date.value], U.round(v, 2)) : null;
       const msMsg = !md ? '' : md.state === 'logrado' ? ' ¡Objetivo corto de ' + kgText(msBy[date.value].target) + ' logrado!' : ' Objetivo corto de ' + kgText(msBy[date.value].target) + ' no cumplido (por ' + kgText(Math.abs(md.diff), Math.abs(md.diff) < 0.1 ? 2 : 1) + ').';
+      openWeeks[mondayOf(date.value)] = true;
       regDate = null; A.ui.toast('Peso guardado.' + msMsg + extra); again();
     } },
     h('h2', null, 'Registrar peso'),
@@ -50,21 +53,34 @@
     err, h('div', { class: 'row-end' }, btn)));
     sync();
 
-    /* Historial */
-    const rows = series.slice().reverse().slice(0, regShown);
-    const list = h('ul', { class: 'rows', 'aria-label': 'Pesos registrados' });
-    rows.forEach(p => {
+    /* Historial agrupado por semana (lunes a domingo), cada semana se puede plegar */
+    const row = p => {
       const i = series.indexOf(p), prev = i > 0 ? series[i - 1] : null, r = recs[p.date], md = msBy[p.date] ? C.milestoneDay(msBy[p.date], p.value) : null;
-      list.appendChild(h('li', { class: 'row' },
+      return h('li', { class: 'row' },
         h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, U.fmtDate(p.date)), r && r.note ? h('span', { class: 'hint' }, r.note) : null,
           md ? h('span', { class: 'status ' + md.state }, MS[md.state][0] + ' Objetivo ' + kgText(msBy[p.date].target) + ': ' + MS[md.state][1].toLowerCase()) : null),
         h('strong', null, kgText(p.value)), h('span', { class: 'delta' }, prev ? signed(U.round(p.value - prev.value, 2), 1) : ''),
         h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Editar ' + U.fmtDate(p.date), onclick: () => { date.value = p.date; regDate = p.date; sync(); kg.focus(); date.scrollIntoView({ block: 'center' }); } }, 'Editar'),
-        h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Eliminar ' + U.fmtDate(p.date), onclick: () => removeWithUndo('weight', r, () => store.save('weight', { date: r.date, kg: r.kg, note: r.note }), again) }, 'Eliminar')));
+        h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Eliminar ' + U.fmtDate(p.date), onclick: () => removeWithUndo('weight', r, () => store.save('weight', { date: r.date, kg: r.kg, note: r.note }), again) }, 'Eliminar'));
+    };
+    const weeks = [], wk = {}, thisWeek = mondayOf(U.today()), thisYear = U.today().slice(0, 4);
+    series.slice().reverse().forEach(p => { const m = mondayOf(p.date); if (!wk[m]) { wk[m] = []; weeks.push(m); } wk[m].push(p); });
+    const avgOf = m => wk[m].reduce((s, p) => s + p.value, 0) / wk[m].length;
+    const box = h('div', { class: 'weeks' });
+    weeks.slice(0, weeksShown).forEach((m, i) => {
+      const ps = wk[m], avg = avgOf(m), older = weeks[i + 1], d = older && U.daysBetween(older, m) === 7 ? U.round(avg - avgOf(older), 2) : null;
+      const label = m === thisWeek ? 'Esta semana' : 'Semana del ' + U.fmtDate(m) + (m.slice(0, 4) !== thisYear ? ' ' + m.slice(0, 4) : '');
+      const det = h('details', { class: 'wk', open: openWeeks[m] != null ? openWeeks[m] : i === 0 },
+        h('summary', null, h('span', { class: 'wk-t' }, label),
+          h('span', { class: 'wk-s' }, ps.length + (ps.length === 1 ? ' pesaje' : ' pesajes') + ' · prom. ' + kgText(avg) + (d != null ? ' · ' + signed(d, 1, 'kg') : ''))),
+        h('ul', { class: 'rows', 'aria-label': 'Pesos de la semana del ' + U.fmtShort(m) }, ps.map(row)));
+      det.addEventListener('toggle', () => { openWeeks[m] = det.open; });
+      box.appendChild(det);
     });
     el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Historial'),
-      series.length ? list : h('p', { class: 'muted' }, 'Aún no hay pesos registrados.'),
-      series.length > regShown ? h('div', { class: 'row-end' }, h('button', { class: 'btn ghost', type: 'button', onclick: () => { regShown += 30; again(); } }, 'Mostrar más')) : null));
+      series.length ? h('p', { class: 'hint' }, 'Por semana, de lunes a domingo. Toca una semana para abrirla o cerrarla; el cambio indica la diferencia de promedio con la semana anterior.') : null,
+      series.length ? box : h('p', { class: 'muted' }, 'Aún no hay pesos registrados.'),
+      weeks.length > weeksShown ? h('div', { class: 'row-end' }, h('button', { class: 'btn ghost', type: 'button', onclick: () => { weeksShown += 8; again(); } }, 'Mostrar más semanas')) : null));
   });
 
   /* ---------- Peso · Pasos ---------- */
@@ -156,12 +172,13 @@
       try { await A.photos.add(pfile.files[0], { date: pdate.value, tag: ptag.value, note: pnote.value.trim() }); A.ui.toast('Foto guardada en este dispositivo.'); again(); }
       catch (x) { perr.textContent = x.message; pbtn.disabled = false; }
     } }, h('h2', null, 'Fotos de progreso'), h('p', { class: 'muted' }, 'Las fotos se guardan solo en este dispositivo: no van al respaldo ni se sincronizan.'),
-    field('p-date', 'Fecha', pdate), field('p-tag', 'Tipo', ptag), field('p-note', 'Nota', pnote), field('p-file', 'Foto', pfile), perr, h('div', { class: 'row-end' }, pbtn)));
+    field('p-date', 'Fecha', pdate, 'Debajo de la foto se muestra el peso que registraste ese día.'), field('p-tag', 'Tipo', ptag), field('p-note', 'Nota', pnote), field('p-file', 'Foto', pfile), perr, h('div', { class: 'row-end' }, pbtn)));
 
-    const photos = A.photos.list();
+    const photos = A.photos.list(), kgBy = {}; store.list('weight').forEach(w => { kgBy[w.date] = w.kg; });
+    const kgDay = d => kgBy[d] != null ? h('span', { class: 'ph-kg' }, 'Peso del día: ' + kgText(kgBy[d])) : h('span', { class: 'hint' }, 'Sin peso registrado ese día');
     const gal = h('div', { class: 'gallery' }), tagName = t => (A.photos.TAGS.filter(x => x[0] === t)[0] || [0, 'Otra'])[1];
     const imgFor = (p, cls) => { const im = h('img', { class: cls || 'thumb', alt: 'Foto ' + tagName(p.tag).toLowerCase() + ' del ' + U.fmtDate(p.date), loading: 'lazy' }); A.photos.url(p.blobKey).then(u => { if (u) { urls.push(u); im.src = u; } else im.alt = 'Foto no disponible en este dispositivo'; }); return im; };
-    photos.slice(0, photoShown).forEach(p => gal.appendChild(h('figure', { class: 'ph' }, imgFor(p), h('figcaption', null, h('span', null, U.fmtDate(p.date) + ' · ' + tagName(p.tag)), p.note ? h('span', { class: 'hint' }, p.note) : null,
+    photos.slice(0, photoShown).forEach(p => gal.appendChild(h('figure', { class: 'ph' }, imgFor(p), h('figcaption', null, h('span', null, U.fmtDate(p.date) + ' · ' + tagName(p.tag)), kgDay(p.date), p.note ? h('span', { class: 'hint' }, p.note) : null,
       h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Eliminar foto del ' + U.fmtDate(p.date), onclick: async () => { if (await A.ui.confirm('¿Eliminar esta foto?', 'Se borra de este dispositivo y no se puede recuperar.', 'Eliminar', true)) { await A.photos.remove(p.id); again(); } } }, 'Eliminar')))));
     const sec = h('section', { class: 'card' }, h('h2', null, 'Galería'), photos.length ? gal : h('p', { class: 'muted' }, 'Aún no hay fotos.'));
     if (photos.length > photoShown) sec.appendChild(h('div', { class: 'row-end' }, h('button', { class: 'btn ghost', type: 'button', onclick: () => { photoShown += 12; again(); } }, 'Mostrar más')));
@@ -173,8 +190,9 @@
       before.value = photos[photos.length - 1].id; after.value = photos[0].id;
       const out = h('div', { class: 'compare' }), info = h('p', { class: 'muted', role: 'status' });
       const draw = () => { out.innerHTML = ''; const a = photos.filter(p => p.id === before.value)[0], b = photos.filter(p => p.id === after.value)[0]; if (!a || !b) return;
-        out.appendChild(h('figure', { class: 'ph' }, imgFor(a, 'big'), h('figcaption', null, 'Antes · ' + U.fmtDate(a.date)))); out.appendChild(h('figure', { class: 'ph' }, imgFor(b, 'big'), h('figcaption', null, 'Después · ' + U.fmtDate(b.date))));
-        const dd = U.daysBetween(a.date, b.date); info.textContent = dd === 0 ? 'Son del mismo día.' : dd > 0 ? dd + ' días entre las dos fotos.' : 'La foto «Antes» es posterior a «Después».'; };
+        out.appendChild(h('figure', { class: 'ph' }, imgFor(a, 'big'), h('figcaption', null, h('span', null, 'Antes · ' + U.fmtDate(a.date)), kgDay(a.date)))); out.appendChild(h('figure', { class: 'ph' }, imgFor(b, 'big'), h('figcaption', null, h('span', null, 'Después · ' + U.fmtDate(b.date)), kgDay(b.date))));
+        const dd = U.daysBetween(a.date, b.date); info.textContent = dd === 0 ? 'Son del mismo día.' : dd > 0 ? dd + ' días entre las dos fotos.' : 'La foto «Antes» es posterior a «Después».';
+        if (kgBy[a.date] != null && kgBy[b.date] != null && dd !== 0) info.textContent += ' Cambio de peso: ' + signed(U.round(kgBy[b.date] - kgBy[a.date], 2), 1, 'kg') + '.'; };
       before.addEventListener('change', () => { freeUrls(); draw(); }); after.addEventListener('change', () => { freeUrls(); draw(); });
       el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Antes y después'), field('c-before', 'Antes', before), field('c-after', 'Después', after), info, out)); draw();
     }
