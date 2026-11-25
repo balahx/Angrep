@@ -65,6 +65,10 @@ a { color: var(--strong); }
 /* Pestañas de secciones */
 .tabs { display: flex; gap: 6px; overflow-x: auto; margin: 0 -20px 20px; padding: 2px 20px; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
+/* Degradado en el borde: avisa que hay más pestañas al deslizar (lo pone shell.js) */
+.tabs.fade-r { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
+.tabs.fade-l { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent); }
+.tabs.fade-l.fade-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent); }
 .tab { flex: none; min-height: 44px; display: inline-flex; align-items: center; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; font-weight: 600; font-size: .95rem; white-space: nowrap; }
 .note:empty { display: none; }
 .tab[aria-pressed="true"], .tab[aria-current="page"] { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
@@ -143,8 +147,9 @@ a { color: var(--strong); }
 .row-t { font-weight: 600; }
 .delta { color: var(--muted); font-size: .85rem; min-width: 2.6em; text-align: right; white-space: nowrap; }
 .btn.sm { min-height: 44px; padding: 0 12px; font-size: .9rem; }
-.seg { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 12px; }
-.seg-b { min-height: 44px; padding: 0 14px; font: inherit; font-weight: 600; border-radius: 22px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
+.seg { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 3px; margin: 1px -3px 9px; }
+.seg::-webkit-scrollbar { display: none; }
+.seg-b { flex: 1 1 auto; min-height: 44px; padding: 0 10px; font: inherit; font-size: .9rem; font-weight: 600; white-space: nowrap; border-radius: 22px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
 .seg-b[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
 .more { margin-bottom: 12px; }
 .more summary, .dt-wrap summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; color: var(--strong); }
@@ -166,7 +171,7 @@ a { color: var(--strong); }
 .ch-axis { stroke: var(--axis); stroke-width: 1; }
 .ch-cross { stroke: var(--muted); stroke-width: 1; }
 .ch-tick { fill: var(--muted); font-size: 12px; font-family: var(--font); }
-.ch-end { fill: var(--text); font-size: 13px; font-weight: 700; font-family: var(--font); }
+.ch-end { fill: var(--text); font-size: 13px; font-weight: 700; font-family: var(--font); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 .ch-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .ch-line.dash { stroke-dasharray: 7 5; }
 .ch-line.dot { stroke-dasharray: 0.1 6; stroke-width: 3; }
@@ -181,7 +186,7 @@ a { color: var(--strong); }
 .tip-row strong { font-size: .95rem; }
 .legend { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .85rem; }
 .legend li { display: flex; align-items: center; gap: 6px; }
-.key { flex: none; }
+.lg-key { flex: none; }
 .dt-wrap { margin-top: 8px; }
 .dt-scroll { overflow-x: auto; }
 .dt { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
@@ -285,6 +290,7 @@ a { color: var(--strong); }
   .tiles { grid-template-columns: repeat(4, 1fr); }
   .gallery { grid-template-columns: repeat(4, 1fr); }
   .tabs { margin: 0 0 20px; padding: 2px 0; flex-wrap: wrap; overflow: visible; }
+  .tabs.fade-l, .tabs.fade-r { -webkit-mask-image: none; mask-image: none; }
   #toast { bottom: 24px; }
 }
 @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }

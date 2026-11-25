@@ -25,7 +25,7 @@
       A.ui.toast('Perfil guardado.');
     } },
       h('h2', null, 'Perfil'),
-      h('p', { class: 'muted' }, 'La estatura, la edad, el sexo y la actividad se usan para calcular tus kcal objetivo (fase 3). Son opcionales por ahora.'),
+      h('p', { class: 'muted' }, 'La estatura, la edad, el sexo y la actividad se usan para calcular tus kcal objetivo. Son opcionales.'),
       field('f-name', 'Nombre', name), field('f-birth', 'Fecha de nacimiento', birth), field('f-sex', 'Sexo', sex, 'Solo para la fórmula de kcal.'),
       field('f-h', 'Estatura (cm)', height), field('f-act', 'Nivel de actividad', act), err,
       h('div', { class: 'row-end' }, h('button', { class: 'btn', type: 'submit' }, 'Guardar'))));

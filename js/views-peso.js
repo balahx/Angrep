@@ -116,7 +116,7 @@
     const pts = []; for (let i = stepsRange - 1; i >= 0; i--) { const d = U.ymd(U.addDays(U.parseYmd(today), -i)), r = by[d]; pts.push({ label: String(+d.slice(8)), y: r ? r.count : 0, tip: U.fmtDate(d) + (r ? '' : ' · sin registro') }); }
     const host = h('div');
     el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Pasos por día'), chips([[14, '14 días'], [30, '30 días'], [90, '90 días']], stepsRange, v => { stepsRange = v; again(); }, 'Periodo'), host));
-    A.charts.bars(host, { ariaLabel: 'Gráfico de columnas: pasos por día, últimos ' + stepsRange + ' días.' + (goal ? ' Meta: ' + U.fmtNum(goal, 0) + ' pasos.' : ''), unit: 'pasos', decimals: 0, name: 'Pasos', pts: pts, goal: goal ? { y: goal, label: 'Meta ' + U.fmtNum(goal, 0) } : null });
+    A.charts.bars(host, { minBars: 3, ariaLabel: 'Gráfico de columnas: pasos por día, últimos ' + stepsRange + ' días.' + (goal ? ' Meta: ' + U.fmtNum(goal, 0) + ' pasos.' : ''), unit: 'pasos', decimals: 0, name: 'Pasos', pts: pts, goal: goal ? { y: goal, label: 'Meta ' + U.fmtNum(goal, 0) } : null });
 
     const rows = list.sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 14), ul = h('ul', { class: 'rows', 'aria-label': 'Pasos registrados' });
     rows.forEach(r => ul.appendChild(h('li', { class: 'row' }, h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, U.fmtDate(r.date))), h('strong', null, U.fmtNum(r.count, 0)), goal ? h('span', { class: 'delta' }, r.count >= goal ? '✓ meta' : '') : null,
@@ -154,7 +154,7 @@
       el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Tus medidas'),
         h('div', { class: 'dt-scroll' }, h('table', { class: 'dt' }, h('thead', null, h('tr', null, ['Zona', 'Última', 'Cambio total', 'Fecha'].map(x => h('th', { scope: 'col' }, x)))), tbody)),
         field('m-view', 'Ver evolución de', sel), host));
-      A.charts.line(host, { ariaLabel: 'Gráfico de línea: ' + SITE_LABEL[shown].toLowerCase() + ' en cm a lo largo del tiempo.', unit: 'cm', decimals: 1, xFormat: x => longDate(U.ymd(U.addDays(U.parseYmd('2000-01-01'), x))), xTickFormat: x => U.fmtShort(U.ymd(U.addDays(U.parseYmd('2000-01-01'), x))),
+      A.charts.line(host, { minPoints: 2, ariaLabel: 'Gráfico de línea: ' + SITE_LABEL[shown].toLowerCase() + ' en cm a lo largo del tiempo.', unit: 'cm', decimals: 1, xFormat: x => longDate(U.ymd(U.addDays(U.parseYmd('2000-01-01'), x))), xTickFormat: x => U.fmtShort(U.ymd(U.addDays(U.parseYmd('2000-01-01'), x))),
         series: [{ name: SITE_LABEL[shown], kind: 'line', cls: 'c1', pts: pts, endLabel: true }, { name: SITE_LABEL[shown], kind: 'dots', cls: 'c1', pts: pts, hover: false, legend: false }] });
       const ul = h('ul', { class: 'rows' }, all.slice().sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 10).map(r => h('li', { class: 'row' }, h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, SITE_LABEL[r.site]), h('span', { class: 'hint' }, U.fmtDate(r.date))), h('strong', null, U.fmtNum(r.cm, 1) + ' cm'),
         h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Eliminar ' + SITE_LABEL[r.site] + ' ' + U.fmtDate(r.date), onclick: () => removeWithUndo('measure', r, () => store.save('measure', { id: r.id, date: r.date, site: r.site, cm: r.cm }), again) }, 'Eliminar'))));
@@ -222,7 +222,7 @@
     }
     const host = h('div');
     el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Evolución del peso'), chips([[30, '30 días'], [90, '90 días'], [180, '6 meses'], ['all', 'Todo']], progRange, v => { progRange = v; again(); }, 'Periodo'), host));
-    A.charts.line(host, { ariaLabel: 'Gráfico de línea del peso en kg. Último peso ' + kgText(series[series.length - 1].value) + ', tendencia ' + kgText(st.avg) + (goal ? ', meta ' + kgText(goal.target) : '') + '.', unit: 'kg', decimals: 1, xDomain: [0, xEnd], xFormat: x => longDate(dateOf(Math.round(x))), xTickFormat: x => U.fmtShort(dateOf(Math.round(x))), series: S2 });
+    A.charts.line(host, { minPoints: 2, ariaLabel: 'Gráfico de línea del peso en kg. Último peso ' + kgText(series[series.length - 1].value) + ', tendencia ' + kgText(st.avg) + (goal ? ', meta ' + kgText(goal.target) : '') + '.', unit: 'kg', decimals: 1, xDomain: [0, xEnd], xFormat: x => longDate(dateOf(Math.round(x))), xTickFormat: x => U.fmtShort(dateOf(Math.round(x))), series: S2 });
 
     /* Proyección */
     const p = proj, rate = goal && goal.targetDate ? C.requiredRate(st.avg, goal, today) : null;

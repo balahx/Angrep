@@ -18,8 +18,18 @@
     viewEl = h('main', { id: 'view', tabindex: '-1' });
     host.appendChild(h('div', { class: 'shell' }, navEl,
       h('div', { class: 'content' }, h('header', { class: 'top' }, A.ui.logo(36, 'top-logo'), titleEl, flagEl), subEl, tabEl, viewEl)));
+    [subEl, tabEl].forEach(e => e.addEventListener('scroll', () => fade(e), { passive: true }));
+    window.addEventListener('resize', () => { fade(subEl); fade(tabEl); });
     A.store.on(updateFlag);
     updateFlag();
+  }
+
+  /* Las pestañas se deslizan: un degradado en el borde avisa que hay más a ese lado */
+  function fade(el) {
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    el.classList.toggle('fade-r', max > 2 && el.scrollLeft < max - 2);
+    el.classList.toggle('fade-l', max > 2 && el.scrollLeft > 2);
   }
 
   function updateFlag() {
@@ -48,7 +58,8 @@
     try { (fn || placeholder(r))(viewEl, r); }
     catch (e) { viewEl.appendChild(h('div', { class: 'card' }, h('p', { class: 'note warn', role: 'alert' }, 'No se pudo mostrar esta pantalla: ' + e.message))); }
     document.title = (r.section ? r.section.label + ' · ' : '') + r.menu.label + ' · Seguimiento';
-    const act = tabEl.querySelector('[aria-current]'); if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'center' });
+    [subEl, tabEl].forEach(row => { const act = row.querySelector('[aria-current]'); if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'center' }); });
+    requestAnimationFrame(() => { fade(subEl); fade(tabEl); });
     viewEl.scrollTop = 0; window.scrollTo(0, 0);
   }
 

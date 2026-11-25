@@ -30,7 +30,7 @@
         Object.assign(sec('entrenador', 'Entrenador', 9, ['Plan anual del entrenador por semana']), { when: () => !!(A.cloud && A.cloud.canPlan()) }),
         sec('progreso', 'Progreso', 4, ['Máximos, 1RM estimado y récords', 'Tonelaje, volumen, RPE y carga']),
         sec('cumplimiento', 'Cumplimiento', 6, ['Sesiones hechas vs planificadas']),
-        sec('historial', 'Historial', 4, ['Sesiones anteriores', 'Importar desde la app Halterofilia (fase 5)'])
+        sec('historial', 'Historial', 4, ['Sesiones anteriores', 'Importar desde la app Halterofilia'])
       ] },
       { id: 'pesas', label: 'Pesas', sections: [
         sec('hoy', 'Sesión', 4, ['Sesión en vivo o registro rápido']),

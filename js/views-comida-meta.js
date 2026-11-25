@@ -92,10 +92,10 @@
     const kHost = h('div'), anyMac = ser.some(s => s.total && s.total.macros), pHost = h('div');
     const pts = key => ser.map(s => ({ label: String(+s.date.slice(8)), y: s.total ? s.total[key] : 0, tip: U.fmtDate(s.date) + (s.total ? '' : ' · sin registro') }));
     el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Kcal por día'), chips([[7, '7 días'], [14, '14 días'], [30, '30 días'], [90, '90 días']], fRange, v => { fRange = v; again(); }, 'Periodo'), kHost));
-    A.charts.bars(kHost, { ariaLabel: 'Gráfico de columnas: kcal por día, últimos ' + fRange + ' días.' + (g.kcal ? ' Meta: ' + U.fmtNum(g.kcal, 0) + ' kcal.' : ''), unit: 'kcal', decimals: 0, name: 'Kcal', pts: pts('kcal'), goal: g.kcal ? { y: g.kcal, label: 'Meta ' + U.fmtNum(g.kcal, 0) } : null });
+    A.charts.bars(kHost, { minBars: 3, ariaLabel: 'Gráfico de columnas: kcal por día, últimos ' + fRange + ' días.' + (g.kcal ? ' Meta: ' + U.fmtNum(g.kcal, 0) + ' kcal.' : ''), unit: 'kcal', decimals: 0, name: 'Kcal', pts: pts('kcal'), goal: g.kcal ? { y: g.kcal, label: 'Meta ' + U.fmtNum(g.kcal, 0) } : null });
     if (anyMac) {
       el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Proteínas por día'), pHost));
-      A.charts.bars(pHost, { ariaLabel: 'Gráfico de columnas: gramos de proteína por día.' + (g.p ? ' Meta: ' + U.fmtNum(g.p, 0) + ' g.' : ''), unit: 'g', decimals: 0, name: 'Proteínas', pts: pts('p'), goal: g.p ? { y: g.p, label: 'Meta ' + U.fmtNum(g.p, 0) } : null });
+      A.charts.bars(pHost, { minBars: 3, ariaLabel: 'Gráfico de columnas: gramos de proteína por día.' + (g.p ? ' Meta: ' + U.fmtNum(g.p, 0) + ' g.' : ''), unit: 'g', decimals: 0, name: 'Proteínas', pts: pts('p'), goal: g.p ? { y: g.p, label: 'Meta ' + U.fmtNum(g.p, 0) } : null });
     }
 
     /* Por semana */

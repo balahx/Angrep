@@ -10,6 +10,15 @@
 
   const svg = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); Object.keys(attrs || {}).forEach(k => e.setAttribute(k, attrs[k])); if (parent) parent.appendChild(e); return e; };
   const fmt = (v, d) => U.fmtNum(v, Math.abs(v) >= 1000 ? 0 : (d == null ? 1 : d));
+  /* Margen izquierdo según el ancho de las etiquetas del eje Y (con margen fijo «15.000» se cortaba) */
+  const leftMargin = (ticks, d) => Math.max(46, Math.ceil(12 + 7.4 * Math.max.apply(null, ticks.map(v => fmt(v, d).length))));
+  /* Con muy pocos datos un gráfico engaña (un punto o una barra suelta con la escala vacía): si la pantalla pide un mínimo
+     (spec.minPoints en líneas, spec.minBars en columnas) se avisa en su lugar */
+  function noData(host, n) {
+    host.classList.add('chart'); host.innerHTML = '';
+    host.appendChild(h('p', { class: 'note', role: 'status' }, 'Aún faltan datos para dibujar este gráfico: se necesitan al menos ' + n + ' registros.'));
+    return { destroy: () => {} };
+  }
 
   function niceTicks(min, max, n) {
     if (!(max > min)) { min -= 1; max += 1; }
@@ -21,7 +30,7 @@
 
   /* Muestra de la serie en la leyenda y en el tooltip: trazo corto con el mismo patrón y color que la línea */
   function key(s) {
-    const k = svg('svg', { viewBox: '0 0 28 10', width: 28, height: 10, 'aria-hidden': 'true', class: 'key' });
+    const k = svg('svg', { viewBox: '0 0 28 10', width: 28, height: 10, 'aria-hidden': 'true', class: 'lg-key' });
     if (s.kind === 'dots') svg('circle', { cx: 14, cy: 5, r: 4, class: 'f-' + s.cls }, k);
     else svg('line', { x1: 1, y1: 5, x2: 27, y2: 5, class: 'ch-line s-' + s.cls + (s.kind === 'dash' ? ' dash' : s.kind === 'dot' ? ' dot' : '') }, k);
     return k;
@@ -51,8 +60,9 @@
 
   /* ---------- Línea ----------
      spec: { ariaLabel, unit, decimals, series:[{ name, kind:'line'|'dash'|'dot'|'dots', cls:'c1'|'c2'|'cm', pts:[{x,y}], endLabel?, hover? }],
-             xDomain?, xTicks?(x0,x1)->[{x,label}], xFormat(x)->texto, xLabel? } */
+             xDomain?, xTicks?(x0,x1)->[{x,label}], xFormat(x)->texto, xLabel?, minPoints? } */
   function line(host, spec) {
+    if (spec.minPoints && new Set([].concat.apply([], spec.series.filter(s => s.hover !== false).map(s => s.pts.map(p => p.x)))).size < spec.minPoints) return noData(host, spec.minPoints);
     let W = 0, idx = 0, xs = [];
     const hoverSeries = () => spec.series.filter(s => s.hover !== false);
     const F = frame(host, spec, spec.series.filter(s => s.legend !== false));
@@ -68,6 +78,7 @@
       const dom = spec.xDomain || [Math.min.apply(null, all.map(p => p.x)), Math.max.apply(null, all.map(p => p.x))];
       const x0 = dom[0], x1 = dom[1] > dom[0] ? dom[1] : dom[0] + 1;
       const ys = all.map(p => p.y), nt = niceTicks(Math.min.apply(null, ys), Math.max.apply(null, ys), 4);
+      m.l = leftMargin(nt.ticks, spec.decimals);
       const sx = x => m.l + (x - x0) / (x1 - x0) * (W - m.l - m.r), sy = y => H - m.b - (y - nt.min) / (nt.max - nt.min) * (H - m.t - m.b);
       const s = svg('svg', { class: 'plotsvg', width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, 'aria-hidden': 'true', focusable: 'false' });
       nt.ticks.forEach(v => { svg('line', { x1: m.l, x2: W - m.r, y1: sy(v), y2: sy(v), class: v === nt.min ? 'ch-axis' : 'ch-grid' }, s); const t = svg('text', { x: m.l - 8, y: sy(v) + 4, 'text-anchor': 'end', class: 'ch-tick' }, s); t.textContent = fmt(v, spec.decimals); });
@@ -75,18 +86,20 @@
       const maxLabels = Math.max(2, Math.floor((W - m.l - m.r) / 70));
       const step = Math.ceil(ticks.length / maxLabels);
       ticks.forEach((t, i) => { if (i % step) return; const e = svg('text', { x: Math.min(W - m.r - 4, Math.max(m.l + 4, sx(t.x))), y: H - 8, 'text-anchor': 'middle', class: 'ch-tick' }, s); e.textContent = t.label; });
+      const ends = [];
       spec.series.forEach(se => {
         const pts = se.pts.slice().sort((a, b) => a.x - b.x);
         if (!pts.length) return;
         if (se.kind === 'dots') { const ring = pts.length <= 150; pts.forEach(p => svg('circle', { cx: sx(p.x), cy: sy(p.y), r: ring ? 4 : 3, class: 'f-' + se.cls + (ring ? ' ch-ring' : '') }, s)); }
         else if (pts.length === 1) svg('circle', { cx: sx(pts[0].x), cy: sy(pts[0].y), r: 4, class: 'f-' + se.cls + ' ch-ring' }, s);
         else svg('path', { d: pts.map((p, i) => (i ? 'L' : 'M') + sx(p.x).toFixed(1) + ' ' + sy(p.y).toFixed(1)).join(' '), class: 'ch-line s-' + se.cls + (se.kind === 'dash' ? ' dash' : se.kind === 'dot' ? ' dot' : '') }, s);
-        if (se.endLabel) {
-          const p = pts[pts.length - 1], cx = sx(p.x), cy = sy(p.y);
-          svg('circle', { cx: cx, cy: cy, r: 5, class: 'f-' + se.cls + ' ch-ring' }, s);
-          const t = svg('text', { x: cx > W / 2 ? cx - 8 : cx + 8, y: Math.max(m.t + 10, cy - 10), 'text-anchor': cx > W / 2 ? 'end' : 'start', class: 'ch-end' }, s);
-          t.textContent = (se.endText || fmt(p.y, spec.decimals) + (spec.unit ? ' ' + spec.unit : ''));
-        }
+        if (se.endLabel) ends.push({ se: se, pts: pts });
+      });
+      ends.forEach(e => {
+        const p = e.pts[e.pts.length - 1], cx = sx(p.x), cy = sy(p.y);
+        svg('circle', { cx: cx, cy: cy, r: 5, class: 'f-' + e.se.cls + ' ch-ring' }, s);
+        const t = svg('text', { x: cx > W / 2 ? cx - 8 : cx + 8, y: Math.max(m.t + 10, cy - 10), 'text-anchor': cx > W / 2 ? 'end' : 'start', class: 'ch-end' }, s);
+        t.textContent = (e.se.endText || fmt(p.y, spec.decimals) + (spec.unit ? ' ' + spec.unit : ''));
       });
       const cross = svg('line', { y1: m.t, y2: H - m.b, class: 'ch-cross', visibility: 'hidden' }, s), hot = svg('g', { class: 'hot' }, s);
       const hit = svg('rect', { x: m.l, y: 0, width: W - m.l - m.r, height: H, fill: 'transparent' }, s);
@@ -121,8 +134,9 @@
   }
 
   /* ---------- Columnas ----------
-     spec: { ariaLabel, unit, decimals, pts:[{ label, y, tip? }], goal?:{ y, label }, name } */
+     spec: { ariaLabel, unit, decimals, pts:[{ label, y, tip? }], goal?:{ y, label }, name, minBars? } */
   function bars(host, spec) {
+    if (spec.minBars && spec.pts.filter(p => p.y > 0).length < spec.minBars) return noData(host, spec.minBars);
     let W = 0, idx = 0;
     const F = frame(host, spec, []), wrap = F.plot, n = spec.pts.length;
     function draw() {
@@ -130,7 +144,8 @@
       const H = 220, m = { l: 46, r: 14, t: 16, b: 28 };
       wrap.querySelectorAll('svg.plotsvg').forEach(x => x.remove());
       const top = Math.max(spec.goal ? spec.goal.y : 0, Math.max.apply(null, spec.pts.map(p => p.y).concat([1])));
-      const nt = niceTicks(0, top, 4), slot = (W - m.l - m.r) / Math.max(1, n), bw = Math.min(24, Math.max(4, slot * 0.6));
+      const nt = niceTicks(0, top, 4); m.l = leftMargin(nt.ticks, 0);
+      const slot = (W - m.l - m.r) / Math.max(1, n), bw = Math.min(24, Math.max(4, slot * 0.6));
       const sy = y => H - m.b - y / nt.max * (H - m.t - m.b), s = svg('svg', { class: 'plotsvg', width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, 'aria-hidden': 'true', focusable: 'false' });
       nt.ticks.forEach(v => { svg('line', { x1: m.l, x2: W - m.r, y1: sy(v), y2: sy(v), class: v === 0 ? 'ch-axis' : 'ch-grid' }, s); const t = svg('text', { x: m.l - 8, y: sy(v) + 4, 'text-anchor': 'end', class: 'ch-tick' }, s); t.textContent = fmt(v, 0); });
       const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor((W - m.l - m.r) / 44))));

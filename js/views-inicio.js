@@ -15,7 +15,7 @@
     const total = Object.keys(store.counts()).reduce((t, k) => t + store.counts()[k], 0);
     const dayMeals = F.dayTotal(meals.filter(m => m.date === today), nutri.filter(q => q.date === today)[0]);
 
-    const coachCard = h('section', { class: 'card coach' }, h('p', { class: 'hint' }, DN[now.getDay()].replace(/^./, c => c.toUpperCase()) + ' ' + U.fmtDate(today) + ' · ' + hi + (prof.name ? ', ' + prof.name : '')));
+    const coachCard = h('section', { class: 'card coach' }, h('p', { class: 'hint' }, DN[now.getDay()].replace(/^./, c => c.toUpperCase()) + ' ' + U.fmtShort(today) + ' · ' + hi + (prof.name ? ', ' + prof.name : '')));
     el.appendChild(coachCard);
     if (!total) { el.appendChild(h('section', { class: 'card empty' }, h('h2', null, 'Empieza por aquí'), h('p', { class: 'muted' }, 'Todavía no hay registros. Con estos tres pasos Inicio se llena de información útil:'),
       h('ol', null, h('li', null, link('#/datos/perfil', 'Completa tu perfil', 'lnk'), ' (sexo, estatura, nacimiento y actividad).'), h('li', null, link('#/peso/registro', 'Registra tu peso', 'lnk'), ' de hoy.'), h('li', null, link('#/datos/halterofilia', 'Importa tu Halterofilia', 'lnk'), ' si la usabas.')))); return; }
