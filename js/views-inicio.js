@@ -33,8 +33,6 @@
     const notes = [];
     if (weights.length && !weights.some(w => w.date === today)) notes.push(['Aún no registras tu peso de hoy. Pésate y anótalo.', '#/peso/registro', 'Registrar']);
     if (g.kcal && !dayMeals && hr >= 12) notes.push(['Aún no registras comidas hoy. Anota lo que llevas.', '#/comida/registro', 'Registrar']);
-    const last = store.getLocal().lastBackupAt, days = last ? Math.floor((Date.now() - last) / 86400000) : null;
-    if (total > 10 && (days == null || days >= 14)) notes.push([days == null ? 'Aún no descargas un respaldo de tus datos.' : 'Hace ' + days + ' días que no descargas un respaldo.', '#/datos/respaldo', 'Respaldar']);
     if (notes.length) el.appendChild(h('section', { class: 'card', 'aria-label': 'Avisos' }, h('h2', null, 'Pendiente'), h('ul', { class: 'rows' }, notes.slice(0, 3).map(n => h('li', { class: 'row' }, h('div', { class: 'row-main' }, h('span', null, n[0])), link(n[1], n[2]))))));
 
     /* Peso */
@@ -50,7 +48,7 @@
     if (pts.length > 1) { const NS = 'http://www.w3.org/2000/svg', mn = Math.min.apply(null, pts), mx = Math.max.apply(null, pts), sp = document.createElementNS(NS, 'svg'), pl = document.createElementNS(NS, 'polyline');
       sp.setAttribute('viewBox', '0 0 100 28'); sp.setAttribute('class', 'spark'); sp.setAttribute('role', 'img'); sp.setAttribute('aria-label', 'Peso de los últimos ' + pts.length + ' registros'); pl.setAttribute('fill', 'none'); pl.setAttribute('vector-effect', 'non-scaling-stroke');
       pl.setAttribute('points', pts.map((v, i) => (i * 100 / (pts.length - 1)).toFixed(1) + ',' + (mx === mn ? 14 : 26 - (v - mn) / (mx - mn) * 24).toFixed(1)).join(' ')); sp.appendChild(pl); wc.appendChild(sp); }
-    wc.appendChild(h('div', { class: 'row-end' }, link('#/peso/registro', weights.some(w => w.date === today) ? 'Ver registro' : 'Registrar peso', 'btn sm'))); el.appendChild(wc);
+    wc.appendChild(h('div', { class: 'row-end' }, link('#/peso/registro', weights.some(w => w.date === today) ? 'Ver registro' : 'Registrar peso', 'btn ghost sm'))); el.appendChild(wc);
 
     /* Comida */
     const hoy = h('section', { class: 'card' }, h('h2', null, 'Hoy')), fc = h('div', { class: 'list-sec' }, h('h3', null, 'Alimentación de hoy'));
@@ -61,12 +59,12 @@
     } else fc.appendChild(h('p', { class: 'muted' }, dayMeals ? 'Hoy llevas ' + U.fmtNum(dayMeals.kcal, 0) + ' kcal. Define tu objetivo para ver cuánto te queda.' : 'Define tu objetivo de kcal para ver cuánto te queda cada día.'));
     const todayCardio = sessions.filter(s => s.discipline === 'cardio' && s.date === today).reduce((t, s) => { const c = T.cardioTotals(s); return { m: t.m + c.minutes, k: t.k + c.kcal }; }, { m: 0, k: 0 });
     if (todayCardio.k) fc.appendChild(h('p', { class: 'hint' }, 'Actividad de hoy: ' + todayCardio.m + ' min y ' + U.fmtNum(todayCardio.k, 0) + ' kcal gastadas (se muestran aparte, no se descuentan de tu objetivo).'));
-    fc.appendChild(h('div', { class: 'row-end' }, link(g.kcal ? '#/comida/registro' : '#/comida/objetivos', g.kcal ? 'Registrar comida' : 'Definir objetivo', 'btn sm'))); hoy.appendChild(fc);
+    fc.appendChild(h('div', { class: 'row-end' }, link(g.kcal ? '#/comida/registro' : '#/comida/objetivos', g.kcal ? 'Registrar comida' : 'Definir objetivo', 'btn ghost sm'))); hoy.appendChild(fc);
 
     /* Pasos */
     const todaySteps = steps.filter(r => r.date === today)[0], sc = h('div', { class: 'list-sec' }, h('h3', null, 'Pasos de hoy'));
     if (todaySteps || stepGoal) sc.appendChild(meter('Pasos', todaySteps ? todaySteps.count : 0, stepGoal, 'pasos', 0, true)); else sc.appendChild(h('p', { class: 'muted' }, 'Aún no registras pasos. Puedes anotar los de hoy y fijar una meta.'));
-    sc.appendChild(h('div', { class: 'row-end' }, link('#/peso/pasos', todaySteps ? 'Ver pasos' : 'Registrar pasos', 'btn sm'))); hoy.appendChild(sc);
+    sc.appendChild(h('div', { class: 'row-end' }, link('#/peso/pasos', todaySteps ? 'Ver pasos' : 'Registrar pasos', 'btn ghost sm'))); hoy.appendChild(sc);
 
     /* Entrenamiento */
     const tc = h('div', { class: 'list-sec' }, h('h3', null, 'Entrenamiento de hoy')), dow = now.getDay(); let any = false;

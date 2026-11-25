@@ -19,6 +19,13 @@
     host.appendChild(h('div', { class: 'shell' }, navEl,
       h('div', { class: 'content' }, h('header', { class: 'top' }, A.ui.logo(36, 'top-logo'), titleEl, flagEl), subEl, tabEl, viewEl)));
     [subEl, tabEl].forEach(e => e.addEventListener('scroll', () => fade(e), { passive: true }));
+    /* Tocar una fila que tiene «Editar» abre el editor (los botones siguen disponibles) */
+    viewEl.addEventListener('click', e => {
+      const row = e.target.closest && e.target.closest('li.row');
+      if (!row || e.target.closest('button, a, input, select, textarea, summary, label')) return;
+      const ed = row.querySelector(':scope > button[aria-label^="Editar"]');
+      if (ed) ed.click();
+    });
     window.addEventListener('resize', () => { fade(subEl); fade(tabEl); });
     A.store.on(updateFlag);
     updateFlag();
@@ -32,7 +39,21 @@
     el.classList.toggle('fade-l', max > 2 && el.scrollLeft > 2);
   }
 
+  /* Punto en «Datos» cuando toca descargar un respaldo (antes era un aviso en Inicio) */
+  function backupDue() {
+    const st = A.store, c = st.counts(), total = Object.keys(c).reduce((t, k) => t + c[k], 0), last = st.getLocal().lastBackupAt;
+    return total > 10 && (last == null || Date.now() - last >= 14 * 86400000);
+  }
+  function updateDot() {
+    const a = navEl && navEl.querySelector('[data-menu=datos]'); if (!a) return;
+    const on = backupDue(), s = a.querySelector('.sr-only');
+    a.classList.toggle('due', on);
+    if (on && !s) a.appendChild(h('span', { class: 'sr-only' }, ' · respaldo pendiente'));
+    if (!on && s) s.remove();
+  }
+
   function updateFlag() {
+    updateDot();
     if (!flagEl) return;
     const s = A.store.status();
     flagEl.textContent = s.ok ? '' : 'Sin espacio: no se está guardando';
@@ -77,5 +98,5 @@
     window.addEventListener('hashchange', render);
     render();
   }
-  A.shell = { mount, start, render };
+  A.shell = { mount, start, render, updateDot };
 })(window);

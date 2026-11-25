@@ -97,7 +97,7 @@
       h('p', { class: 'muted' }, 'Contiene datos de salud: guárdalo en un lugar privado. Las fotos y los documentos no se incluyen.'),
       h('div', { class: 'row-end' }, h('button', { class: 'btn', type: 'button', onclick: () => {
         A.ui.download(A.backup.fileName(), JSON.stringify(A.backup.build(), null, 1));
-        store.setLocal({ lastBackupAt: Date.now() }); A.ui.toast('Respaldo descargado.'); el.innerHTML = ''; V['datos/respaldo'](el);
+        store.setLocal({ lastBackupAt: Date.now() }); A.shell.updateDot(); A.ui.toast('Respaldo descargado.'); el.innerHTML = ''; V['datos/respaldo'](el);
       } }, 'Descargar respaldo (JSON)'))));
     el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Importar'),
       h('p', { class: 'muted' }, 'Se mezcla con lo que ya tienes: gana el registro más reciente, así que importar el mismo archivo dos veces no duplica nada.'),

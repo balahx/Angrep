@@ -58,7 +58,7 @@
       const i = series.indexOf(p), prev = i > 0 ? series[i - 1] : null, r = recs[p.date], md = msBy[p.date] ? C.milestoneDay(msBy[p.date], p.value) : null;
       return h('li', { class: 'row' },
         h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, U.fmtDate(p.date)), r && r.note ? h('span', { class: 'hint' }, r.note) : null),
-        h('strong', null, kgText(p.value)), h('span', { class: 'delta' }, prev ? signed(U.round(p.value - prev.value, 2), 1) : ''),
+        h('div', { class: 'row-val' }, h('strong', null, kgText(p.value)), h('span', { class: 'delta' }, prev ? signed(U.round(p.value - prev.value, 2), 1) : '')),
         h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Editar ' + U.fmtDate(p.date), onclick: () => { date.value = p.date; regDate = p.date; sync(); kg.focus(); date.scrollIntoView({ block: 'center' }); } }, 'Editar'),
         h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Eliminar ' + U.fmtDate(p.date), onclick: () => removeWithUndo('weight', r, () => store.save('weight', { date: r.date, kg: r.kg, note: r.note }), again) }, 'Eliminar'),
         md ? h('div', { class: 'row-note' }, h('span', { class: 'status ' + md.state }, MS[md.state][0] + ' Objetivo ' + kgText(msBy[p.date].target) + ': ' + MS[md.state][1].toLowerCase())) : null);
@@ -240,7 +240,7 @@
     const mon = C.monthly(series), thisM = today.slice(0, 7), prevM = C.prevMonth(thisM);
     const tbody = h('tbody', null, mon.slice(-6).reverse().map(r => h('tr', null, h('th', { scope: 'row' }, r.month.slice(5) + '/' + r.month.slice(0, 4)), h('td', null, U.fmtNum(r.avg, 1) + ' kg'), h('td', null, U.fmtNum(r.min, 1) + ' – ' + U.fmtNum(r.max, 1)), h('td', null, r.delta == null ? '–' : signed(r.delta, 1, 'kg')), h('td', null, String(r.n)))));
     const cmpHost = h('div'), a = C.byDayOfMonth(series, thisM), b = C.byDayOfMonth(series, prevM);
-    const sec = h('section', { class: 'card' }, h('h2', null, 'Mes contra mes'), h('div', { class: 'dt-scroll' }, h('table', { class: 'dt' }, h('thead', null, h('tr', null, ['Mes', 'Promedio', 'Mín – máx', 'Cambio', 'Registros'].map(x => h('th', { scope: 'col' }, x)))), tbody)));
+    const sec = h('section', { class: 'card' }, h('h2', null, 'Mes contra mes'), h('div', { class: 'dt-scroll' }, h('table', { class: 'dt' }, h('thead', null, h('tr', null, ['Mes', 'Promedio', 'Mín – máx', 'Cambio', 'Días'].map(x => h('th', { scope: 'col' }, x)))), tbody)));
     if (a.length + b.length >= 2) { sec.appendChild(h('h3', { class: 'sub' }, 'Este mes frente al anterior, por día del mes')); sec.appendChild(cmpHost); }
     el.appendChild(sec);
     if (a.length + b.length >= 2) A.charts.line(cmpHost, { ariaLabel: 'Gráfico de línea: peso de este mes frente al mes anterior, por día del mes.', unit: 'kg', decimals: 1, xDomain: [1, 31], xLabel: 'Día del mes', xFormat: x => 'Día ' + Math.round(x), xTicks: () => [1, 8, 15, 22, 29].map(x => ({ x: x, label: String(x) })),
