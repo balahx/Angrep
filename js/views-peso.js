@@ -31,8 +31,8 @@
     const tag = h('select', { class: 'txt', id: 'w-tag', 'aria-label': 'Tipo de foto' }, optionsOf(A.photos.TAGS, 'frente'));
     const file = h('input', { class: 'file', id: 'w-photo', type: 'file', accept: 'image/*' });
     const hint = h('p', { class: 'hint' }), err = errBox();
-    const btn = h('button', { class: 'btn', type: 'submit' }, 'Guardar');
-    const sync = () => { const r = recs[date.value]; if (r) { kg.value = String(r.kg).replace('.', ','); note.value = r.note || ''; } const m = msBy[date.value]; hint.textContent = [r ? 'Ya hay un peso para este día: al guardar se actualiza.' : '', m ? 'Este día tiene un objetivo corto de ' + kgText(m.target) + ': al guardar se marca como logrado o no cumplido.' : ''].filter(Boolean).join(' '); btn.textContent = r ? 'Actualizar' : 'Guardar'; };
+    const btn = h('button', { class: 'btn', type: 'submit' }, 'Guardar'), whenSum = h('summary', null);
+    const sync = () => { whenSum.textContent = (date.value === U.today() ? 'Hoy' : U.fmtShort(date.value)) + ' · cambiar fecha, agregar nota o foto'; const r = recs[date.value]; if (r) { kg.value = String(r.kg).replace('.', ','); note.value = r.note || ''; } const m = msBy[date.value]; hint.textContent = [r ? 'Ya hay un peso para este día: al guardar se actualiza.' : '', m ? 'Este día tiene un objetivo corto de ' + kgText(m.target) + ': al guardar se marca como logrado o no cumplido.' : ''].filter(Boolean).join(' '); btn.textContent = r ? 'Actualizar' : 'Guardar'; };
     date.addEventListener('change', () => { regDate = date.value; sync(); });
     el.appendChild(h('form', { class: 'card form', novalidate: true, onsubmit: async e => {
       e.preventDefault(); err.textContent = '';
@@ -48,8 +48,8 @@
       regDate = null; A.ui.toast('Peso guardado.' + msMsg + extra); again();
     } },
     h('h2', null, 'Registrar peso'),
-    field('w-date', 'Fecha', date), field('w-kg', 'Peso (kg)', A.wheel.attach(kg, { min: 20, max: 300, unit: 'kg', title: 'Peso', start: (st && st.last.value) || 70 }), 'Se acepta coma o punto.'), field('w-note', 'Nota', note), hint,
-    h('details', { class: 'more' }, h('summary', null, 'Agregar una foto (opcional)'), field('w-photo', 'Foto', file, 'Se guarda solo en este dispositivo. También puedes agregarla después en Medidas y fotos.'), field('w-tag', 'Tipo', tag)),
+    field('w-kg', 'Peso (kg)', A.wheel.attach(kg, { min: 20, max: 300, unit: 'kg', title: 'Peso', start: (st && st.last.value) || 70 }), 'Se acepta coma o punto.'), hint,
+    h('details', { class: 'more' }, whenSum, field('w-date', 'Fecha', date), field('w-note', 'Nota', note), field('w-photo', 'Foto (opcional)', file, 'Se guarda solo en este dispositivo. También puedes agregarla después en Medidas y fotos.'), field('w-tag', 'Tipo de foto', tag)),
     err, h('div', { class: 'row-end' }, btn)));
     sync();
 
@@ -91,9 +91,14 @@
     const ss = C.stepsStats(list, goal, today), f0 = n => n == null ? '–' : U.fmtNum(n, 0);
     el.appendChild(tiles([tile('Promedio (7 días)', f0(ss.avg7), 'pasos por día'), tile('Racha', goal ? ss.streak + (ss.streak === 1 ? ' día' : ' días') : '–', goal ? 'Mejor: ' + ss.best : 'Define una meta'), tile('Meta cumplida (30 d)', ss.pct30 == null ? '–' : ss.pct30 + ' %', 'de los últimos 30 días')]));
 
+    const pts = []; for (let i = stepsRange - 1; i >= 0; i--) { const d = U.ymd(U.addDays(U.parseYmd(today), -i)), r = by[d]; pts.push({ label: String(+d.slice(8)), y: r ? r.count : 0, tip: U.fmtDate(d) + (r ? '' : ' · sin registro') }); }
+    const host = h('div');
+    el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Pasos por día'), chips([[14, '14 días'], [30, '30 días'], [90, '90 días']], stepsRange, v => { stepsRange = v; again(); }, 'Periodo'), host));
+    A.charts.bars(host, { minBars: 3, ariaLabel: 'Gráfico de columnas: pasos por día, últimos ' + stepsRange + ' días.' + (goal ? ' Meta: ' + U.fmtNum(goal, 0) + ' pasos.' : ''), unit: 'pasos', decimals: 0, name: 'Pasos', pts: pts, goal: goal ? { y: goal, label: 'Meta ' + U.fmtNum(goal, 0) } : null });
+
     const date = dateInput('s-date'), cnt = h('input', { class: 'txt', id: 's-count', type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: 'Ej. 8500' }), err = errBox();
-    const btn = h('button', { class: 'btn', type: 'submit' }, 'Guardar');
-    const sync = () => { const r = by[date.value]; cnt.value = r ? String(r.count) : ''; btn.textContent = r ? 'Actualizar' : 'Guardar'; };
+    const btn = h('button', { class: 'btn', type: 'submit' }, 'Guardar'), whenSum = h('summary', null);
+    const sync = () => { whenSum.textContent = (date.value === today ? 'Hoy' : U.fmtShort(date.value)) + ' · cambiar fecha'; const r = by[date.value]; cnt.value = r ? String(r.count) : ''; btn.textContent = r ? 'Actualizar' : 'Guardar'; };
     date.addEventListener('change', sync);
     el.appendChild(h('form', { class: 'card form', novalidate: true, onsubmit: e => {
       e.preventDefault(); err.textContent = '';
@@ -102,7 +107,7 @@
       if (!U.isYmd(date.value) || date.value > today) { err.textContent = 'La fecha no es válida (no puede ser futura).'; return; }
       try { store.save('steps', { date: date.value, count: v }); } catch (x) { err.textContent = x.message; return; }
       A.ui.toast('Pasos guardados.'); again();
-    } }, h('h2', null, 'Registrar pasos'), field('s-date', 'Fecha', date), field('s-count', 'Pasos del día', cnt), err, h('div', { class: 'row-end' }, btn)));
+    } }, h('h2', null, 'Registrar pasos'), field('s-count', 'Pasos del día', cnt), h('details', { class: 'more' }, whenSum, field('s-date', 'Fecha', date)), err, h('div', { class: 'row-end' }, btn)));
     sync();
 
     const gIn = h('input', { class: 'txt', id: 'g-steps', type: 'text', inputmode: 'numeric', value: goal ? String(goal) : '', placeholder: 'Ej. 8000' }), gErr = errBox();
@@ -111,12 +116,7 @@
       const v = U.parseNum(gIn.value);
       if (v == null || !Number.isInteger(v) || v < 1000 || v > 100000) { gErr.textContent = 'La meta debe ser un número entero entre 1.000 y 100.000.'; return; }
       store.save('goal', { id: 'goal_steps', kind: 'steps', target: v }); A.ui.toast('Meta guardada.'); again();
-    } }, h('h2', null, 'Meta diaria'), field('g-steps', 'Pasos por día', gIn, 'Con la meta se calculan la racha y el cumplimiento.'), gErr, h('div', { class: 'row-end' }, h('button', { class: 'btn', type: 'submit' }, 'Guardar meta'))));
-
-    const pts = []; for (let i = stepsRange - 1; i >= 0; i--) { const d = U.ymd(U.addDays(U.parseYmd(today), -i)), r = by[d]; pts.push({ label: String(+d.slice(8)), y: r ? r.count : 0, tip: U.fmtDate(d) + (r ? '' : ' · sin registro') }); }
-    const host = h('div');
-    el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Pasos por día'), chips([[14, '14 días'], [30, '30 días'], [90, '90 días']], stepsRange, v => { stepsRange = v; again(); }, 'Periodo'), host));
-    A.charts.bars(host, { minBars: 3, ariaLabel: 'Gráfico de columnas: pasos por día, últimos ' + stepsRange + ' días.' + (goal ? ' Meta: ' + U.fmtNum(goal, 0) + ' pasos.' : ''), unit: 'pasos', decimals: 0, name: 'Pasos', pts: pts, goal: goal ? { y: goal, label: 'Meta ' + U.fmtNum(goal, 0) } : null });
+    } }, h('details', { class: 'more', open: !goal }, h('summary', null, goal ? 'Meta diaria: ' + U.fmtNum(goal, 0) + ' pasos · cambiar' : 'Meta diaria: definir'), field('g-steps', 'Pasos por día', gIn, 'Con la meta se calculan la racha y el cumplimiento.'), gErr, h('div', { class: 'row-end' }, h('button', { class: 'btn', type: 'submit' }, 'Guardar meta')))));
 
     const rows = list.sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 14), ul = h('ul', { class: 'rows', 'aria-label': 'Pasos registrados' });
     rows.forEach(r => ul.appendChild(h('li', { class: 'row' }, h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, U.fmtDate(r.date))), h('strong', null, U.fmtNum(r.count, 0)), goal ? h('span', { class: 'delta' }, r.count >= goal ? '✓ meta' : '') : null,
@@ -204,7 +204,6 @@
     const series = C.weightSeries(store.list('weight')), today = U.today(), goalRec = goalMain();
     if (!series.length) { el.appendChild(h('section', { class: 'card empty' }, h('h2', null, 'Sin datos todavía'), h('p', { class: 'muted' }, 'Registra tu peso para ver la tendencia, la proyección y la comparación mes contra mes.'), h('a', { class: 'btn', href: '#/peso/registro' }, 'Registrar peso'))); return; }
     const st = C.stats(series), tr = C.trend(series), goal = goalRec ? { target: goalRec.target, targetDate: goalRec.targetDate, startValue: goalRec.startValue, startDate: goalRec.startDate } : null;
-    el.appendChild(tiles([tile('Tendencia actual', kgText(st.avg), 'Promedio de 7 días'), tile('Cambio en 7 días', signed(st.d7, 1, 'kg'), st.d7 == null ? 'Faltan datos' : ''), tile('Cambio en 30 días', signed(st.d30, 1, 'kg'), st.d30 == null ? 'Faltan datos' : ''), tile('Desde el inicio', signed(st.sinceStart, 1, 'kg'), 'desde ' + U.fmtDate(st.first.date))]));
 
     /* Gráfico principal */
     const first = series[0].date, span = Math.max(14, U.daysBetween(first, today)), days = progRange === 'all' ? span : progRange;
@@ -223,6 +222,8 @@
     const host = h('div');
     el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Evolución del peso'), chips([[30, '30 días'], [90, '90 días'], [180, '6 meses'], ['all', 'Todo']], progRange, v => { progRange = v; again(); }, 'Periodo'), host));
     A.charts.line(host, { minPoints: 2, ariaLabel: 'Gráfico de línea del peso en kg. Último peso ' + kgText(series[series.length - 1].value) + ', tendencia ' + kgText(st.avg) + (goal ? ', meta ' + kgText(goal.target) : '') + '.', unit: 'kg', decimals: 1, xDomain: [0, xEnd], xFormat: x => longDate(dateOf(Math.round(x))), xTickFormat: x => U.fmtShort(dateOf(Math.round(x))), series: S2 });
+    el.appendChild(h('section', { 'aria-label': 'Cifras de tu peso' }, tiles([tile('Tendencia actual', kgText(st.avg), 'Promedio de 7 días'), tile('Cambio en 7 días', signed(st.d7, 1, 'kg'), st.d7 == null ? 'Faltan datos' : '')]),
+      h('details', { class: 'more' }, h('summary', null, 'Más cifras'), tiles([tile('Cambio en 30 días', signed(st.d30, 1, 'kg'), st.d30 == null ? 'Faltan datos' : ''), tile('Desde el inicio', signed(st.sinceStart, 1, 'kg'), 'desde ' + U.fmtDate(st.first.date))]))));
 
     /* Proyección */
     const p = proj, rate = goal && goal.targetDate ? C.requiredRate(st.avg, goal, today) : null;

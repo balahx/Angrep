@@ -18,7 +18,7 @@
   const defaultSlot = () => { const hr = new Date().getHours(); return hr < 11 ? 'desayuno' : hr < 16 ? 'almuerzo' : hr < 19 ? 'once' : 'cena'; };
 
   /* ---------- Alimentación · Registro ---------- */
-  let fDate = null, lastSlot = null, editMeal = null;
+  let fDate = null, lastSlot = null, editMeal = null, sheetOpen = false;
   wrapView('comida/registro', (el, again) => {
     const today = U.today(), date = fDate && fDate <= today ? fDate : today, g = goals();
     const meals = store.list('meal').filter(m => m.date === date), quick = store.get('nutriday', 'nutriday_' + date) || null;
@@ -51,7 +51,7 @@
     el.appendChild(sum);
 
     /* Formulario para agregar o editar una comida */
-    const em = editMeal && editMeal.date === date ? editMeal : null;
+    const em = editMeal && editMeal.date === date ? editMeal : null, startOpen = sheetOpen || !!em; sheetOpen = false;
     let picked = em && em.foodId ? store.get('food', em.foodId) || null : null;
     const slotSel = h('select', { class: 'txt', id: 'fm-slot' }, optionsOf(S.SLOTS.map(s => [s, SLOT_LABEL[s]]), em ? em.slot : lastSlot || defaultSlot()));
     const q = h('input', { class: 'txt', id: 'fm-q', type: 'search', autocomplete: 'off', placeholder: 'Escribe para buscar…', 'aria-controls': 'fm-pick' });
@@ -62,7 +62,7 @@
     const keep = h('input', { type: 'checkbox', id: 'fm-keep' }), keepRow = h('label', { class: 'check', for: 'fm-keep' }, keep, ' Guardar también en mis alimentos'), err = errBox(), pickedNote = h('p', { class: 'hint' });
     const fill = () => { if (!picked) return; const qv = readNum(qty, true); if (qv == null || isNaN(qv) || qv <= 0) return; const s = F.scale(picked, qv); kc.value = String(s.kcal).replace('.', ','); p.value = s.p == null ? '' : String(s.p).replace('.', ','); c.value = s.c == null ? '' : String(s.c).replace('.', ','); f.value = s.f == null ? '' : String(s.f).replace('.', ','); };
     const showPicked = () => { pickedNote.textContent = picked ? 'Valores calculados desde «' + picked.name + '» (' + U.fmtNum(picked.amount, 1) + ' ' + picked.unit + ' = ' + U.fmtNum(picked.kcal, 0) + ' kcal). Puedes ajustarlos.' : ''; keepRow.hidden = !!picked; };
-    const chooseFood = fd => { picked = fd; name.value = fd.name; qty.value = String(fd.amount).replace('.', ','); unit.value = fd.unit || 'g'; fill(); showPicked(); pick.innerHTML = ''; q.value = ''; kc.focus(); };
+    const chooseFood = fd => { picked = fd; const dt = form && form.querySelector('details.more'); if (dt) dt.open = true; name.value = fd.name; qty.value = String(fd.amount).replace('.', ','); unit.value = fd.unit || 'g'; fill(); showPicked(); pick.innerHTML = ''; q.value = ''; kc.focus(); };
     const list = () => {
       pick.innerHTML = ''; const res = F.search(store.list('food'), q.value).slice(0, 8);
       if (!res.length && q.value.trim()) pick.appendChild(h('li', { class: 'hint' }, 'No hay coincidencias en tu base. Escribe el nombre y los valores abajo.'));
@@ -70,7 +70,9 @@
     };
     q.addEventListener('input', list);
     qty.addEventListener('input', fill); name.addEventListener('input', () => { if (picked && F.norm(name.value) !== F.norm(picked.name)) { picked = null; showPicked(); } });
-    const form = h('form', { class: 'card form', novalidate: true, onsubmit: e => {
+    const closeSheet = () => { editMeal = null; again(); };
+    const back = h('div', { class: 'sheet-back' + (startOpen ? ' open' : ''), onclick: closeSheet });
+    const form = h('form', { class: 'card form sheet' + (startOpen ? ' open' : ''), novalidate: true, 'aria-label': em ? 'Editar comida' : 'Agregar comida', onkeydown: e => { if (e.key === 'Escape') closeSheet(); }, onsubmit: e => {
       e.preventDefault(); err.textContent = '';
       const nm = name.value.trim(), qv = readNum(qty, true), kv = readNum(kc), pv = readNum(p, true), cv = readNum(c, true), fv = readNum(f, true);
       if (!nm) { err.textContent = 'Escribe qué comiste.'; return; }
@@ -84,15 +86,17 @@
       }
       lastSlot = slotSel.value; editMeal = null; A.ui.toast((em ? 'Comida actualizada.' : 'Comida agregada.') + extra); again();
     } },
-    h('h2', null, em ? 'Editar comida' : 'Agregar comida'),
+    h('div', { class: 'sheet-head' }, h('h2', null, em ? 'Editar comida' : 'Agregar comida'), h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Cerrar', onclick: closeSheet }, 'Cerrar')),
     field('fm-slot', 'Comida del día', slotSel),
     em ? null : field('fm-q', 'Buscar en mis alimentos', q, 'Primero se busca en tu base, sin conexión.'), em ? null : pick,
     field('fm-name', 'Qué comiste', name), pickedNote,
-    h('div', { class: 'grid2' }, field('fm-qty', 'Cantidad', qty), field('fm-unit', 'Unidad', unit)),
-    h('div', { class: 'grid2' }, field('fm-kcal', 'Kcal', kc), field('fm-p', 'Proteínas (g)', p)),
-    h('div', { class: 'grid2' }, field('fm-c', 'Carbohidratos (g)', c), field('fm-f', 'Grasas (g)', f)),
+    field('fm-kcal', 'Kcal', kc),
+    h('details', { class: 'more', open: !!(em && (em.qty != null || em.p != null || em.c != null || em.f != null)) }, h('summary', null, 'Más detalle: cantidad y macros'),
+      h('div', { class: 'grid2' }, field('fm-qty', 'Cantidad', qty), field('fm-unit', 'Unidad', unit)),
+      h('div', { class: 'grid2' }, field('fm-p', 'Proteínas (g)', p), field('fm-c', 'Carbohidratos (g)', c)), field('fm-f', 'Grasas (g)', f)),
     keepRow, err,
-    h('div', { class: 'row-end' }, em ? h('button', { class: 'btn ghost', type: 'button', onclick: () => { editMeal = null; again(); } }, 'Cancelar') : null, h('button', { class: 'btn', type: 'submit' }, em ? 'Actualizar' : 'Agregar')));
+    h('div', { class: 'row-end' }, em ? h('button', { class: 'btn ghost', type: 'button', onclick: closeSheet }, 'Cancelar') : null, h('button', { class: 'btn', type: 'submit' }, em ? 'Actualizar' : 'Agregar')));
+    const openSheet = sl => { if (sl) slotSel.value = sl; form.classList.add('open'); back.classList.add('open'); const t = document.getElementById('fm-q') || document.getElementById('fm-name'); if (t) t.focus(); };
     showPicked(); if (!em) list();
 
     /* Comidas del día */
@@ -104,35 +108,38 @@
       items.forEach(m => ul.appendChild(h('li', { class: 'row' },
         h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, m.name), h('span', { class: 'hint' }, [m.qty ? U.fmtNum(m.qty, 1) + ' ' + (m.unit || '') : null, macroText(m)].filter(Boolean).join(' · '))),
         h('strong', null, U.fmtNum(m.kcal, 0) + ' kcal'),
-        h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Editar ' + m.name, onclick: () => { editMeal = m; again(); const fm = document.getElementById('fm-name'); if (fm) { fm.focus(); fm.scrollIntoView({ block: 'center' }); } } }, 'Editar'),
+        h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Editar ' + m.name, onclick: () => { editMeal = m; again(); const fm = document.getElementById('fm-name'); if (fm) fm.focus(); } }, 'Editar'),
         h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Eliminar ' + m.name, onclick: () => removeWithUndo('meal', m, () => store.save('meal', m), again) }, 'Eliminar'))));
+      if (!items.length) { secs.appendChild(h('button', { class: 'slot-add', type: 'button', 'aria-label': 'Agregar a ' + SLOT_LABEL[sl].toLowerCase(), onclick: () => openSheet(sl) }, '+ ' + SLOT_LABEL[sl])); return; }
       secs.appendChild(h('div', { class: 'slot' },
-        h('div', { class: 'slot-head' }, h('h3', { class: 'sub' }, SLOT_LABEL[sl]), items.length ? h('span', { class: 'muted' }, U.fmtNum(sub, 0) + ' kcal') : null,
-          h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Agregar a ' + SLOT_LABEL[sl].toLowerCase(), onclick: () => { slotSel.value = sl; const t = document.getElementById('fm-q') || document.getElementById('fm-name'); if (t) { t.focus(); t.scrollIntoView({ block: 'center' }); } } }, 'Agregar')),
-        items.length ? ul : h('p', { class: 'hint' }, 'Sin registros.')));
+        h('div', { class: 'slot-head' }, h('h3', { class: 'sub' }, SLOT_LABEL[sl]), h('span', { class: 'muted' }, U.fmtNum(sub, 0) + ' kcal'),
+          h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Agregar a ' + SLOT_LABEL[sl].toLowerCase(), onclick: () => openSheet(sl) }, 'Agregar')),
+        ul));
     });
-    secs.appendChild(h('div', { class: 'row-end wrap' }, h('button', { class: 'btn ghost', type: 'button', disabled: !prev.length, onclick: async () => {
-      if (meals.length && !(await A.ui.confirm('¿Copiar el día anterior?', 'Este día ya tiene comidas; se agregan las del día anterior sin borrar las actuales.', 'Copiar'))) return;
-      prev.forEach(m => store.save('meal', { date: date, slot: m.slot, name: m.name, kcal: m.kcal, p: m.p == null ? null : m.p, c: m.c == null ? null : m.c, f: m.f == null ? null : m.f, qty: m.qty == null ? null : m.qty, unit: m.unit || null, foodId: m.foodId || null }));
-      A.ui.toast(prev.length + (prev.length === 1 ? ' comida copiada.' : ' comidas copiadas.')); again();
-    } }, 'Copiar el día anterior' + (prev.length ? ' (' + prev.length + ')' : ''))));
-    el.appendChild(secs);
-    el.appendChild(form);
-
+    secs.appendChild(h('div', { class: 'row-end' }, h('button', { class: 'btn', type: 'button', onclick: () => openSheet() }, 'Agregar comida')));
     /* Totales rápidos del día (cuando no se detalla cada comida) */
     const qk = numInput('q-kcal', 'Ej. 1900', quick ? quick.kcal : null), qp = numInput('q-p', 'Opcional', quick ? quick.p : null), qc = numInput('q-c', 'Opcional', quick ? quick.c : null), qf = numInput('q-f', 'Opcional', quick ? quick.f : null), qerr = errBox();
-    el.appendChild(h('form', { class: 'card form', novalidate: true, onsubmit: e => {
+    const quickForm = h('form', { class: 'form', novalidate: true, onsubmit: e => {
       e.preventDefault(); qerr.textContent = '';
       const kv = readNum(qk), pv = readNum(qp, true), cv = readNum(qc, true), fv = readNum(qf, true);
       if (isNaN(kv) || kv < 0 || kv > 20000) { qerr.textContent = 'Escribe las kcal del día como número (0 a 20.000).'; return; }
       if ([pv, cv, fv].some(v => v != null && (isNaN(v) || v < 0 || v > 2000))) { qerr.textContent = 'Los macros deben ser números en gramos, o dejarse vacíos.'; return; }
       try { store.save('nutriday', { date: date, kcal: U.round(kv, 1), p: pv, c: cv, f: fv }); } catch (x) { qerr.textContent = x.message; return; }
       A.ui.toast('Totales del día guardados.'); again();
-    } }, h('h2', null, 'Totales rápidos del día'),
+    } }, h('h3', { class: 'sub' }, 'Totales rápidos del día'),
     h('p', { class: 'muted' }, 'Para días en que no detallas cada comida: anota solo el total. ' + (meals.length ? 'Este día ya tiene comidas, así que estos totales no se suman: valen las comidas.' : 'Si luego agregas comidas, valen las comidas.')),
     h('div', { class: 'grid2' }, field('q-kcal', 'Kcal del día', qk), field('q-p', 'Proteínas (g)', qp)),
     h('div', { class: 'grid2' }, field('q-c', 'Carbohidratos (g)', qc), field('q-f', 'Grasas (g)', qf)), qerr,
-    h('div', { class: 'row-end' }, quick ? h('button', { class: 'btn ghost', type: 'button', onclick: () => removeWithUndo('nutriday', quick, () => store.save('nutriday', { date: quick.date, kcal: quick.kcal, p: quick.p == null ? null : quick.p, c: quick.c == null ? null : quick.c, f: quick.f == null ? null : quick.f }), again, 'Totales eliminados.') }, 'Quitar totales') : null, h('button', { class: 'btn', type: 'submit' }, quick ? 'Actualizar' : 'Guardar'))));
+    h('div', { class: 'row-end' }, quick ? h('button', { class: 'btn ghost', type: 'button', onclick: () => removeWithUndo('nutriday', quick, () => store.save('nutriday', { date: quick.date, kcal: quick.kcal, p: quick.p == null ? null : quick.p, c: quick.c == null ? null : quick.c, f: quick.f == null ? null : quick.f }), again, 'Totales eliminados.') }, 'Quitar totales') : null, h('button', { class: 'btn', type: 'submit' }, quick ? 'Actualizar' : 'Guardar')));
+
+
+    secs.appendChild(h('details', { class: 'more' }, h('summary', null, 'Más opciones del día'), h('div', { class: 'row-end wrap' }, h('button', { class: 'btn ghost', type: 'button', disabled: !prev.length, onclick: async () => {
+      if (meals.length && !(await A.ui.confirm('¿Copiar el día anterior?', 'Este día ya tiene comidas; se agregan las del día anterior sin borrar las actuales.', 'Copiar'))) return;
+      prev.forEach(m => store.save('meal', { date: date, slot: m.slot, name: m.name, kcal: m.kcal, p: m.p == null ? null : m.p, c: m.c == null ? null : m.c, f: m.f == null ? null : m.f, qty: m.qty == null ? null : m.qty, unit: m.unit || null, foodId: m.foodId || null }));
+      A.ui.toast(prev.length + (prev.length === 1 ? ' comida copiada.' : ' comidas copiadas.')); again();
+    } }, 'Copiar el día anterior' + (prev.length ? ' (' + prev.length + ')' : ''))), quickForm));
+    el.appendChild(secs);
+    el.appendChild(back); el.appendChild(form);
   });
 
   /* ---------- Alimentación · Alimentos ---------- */

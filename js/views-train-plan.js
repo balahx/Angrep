@@ -22,7 +22,7 @@
       el.appendChild(exCard);
       const ed = editEx && exs.some(x => x.id === editEx.id) ? editEx : null;
       const nm = h('input', { class: 'txt', id: 'ex-name', type: 'text', maxlength: 120, value: ed ? ed.name : '', placeholder: 'Ej. Arranque' }), mx = numInput('ex-max', 'Opcional', ed ? ed.max : null), rs = numInput('ex-rest', String(REST[disc]), ed ? ed.rest : null), err = errBox();
-      el.appendChild(h('form', { class: 'card form', novalidate: true, onsubmit: e => {
+      el.appendChild(h('details', { class: 'card fold', open: !!ed }, h('summary', null, ed ? 'Editar ejercicio' : '+ Agregar ejercicio'), h('form', { class: 'form', novalidate: true, onsubmit: e => {
         e.preventDefault(); err.textContent = '';
         const name = nm.value.trim(), m = readNum(mx, true), r = readNum(rs, true);
         if (!name) { err.textContent = 'Escribe el nombre del ejercicio.'; return; }
@@ -31,9 +31,9 @@
         if (exs.some(x => x.name.toLowerCase() === name.toLowerCase() && (!ed || x.id !== ed.id))) { err.textContent = 'Ya tienes un ejercicio con ese nombre.'; return; }
         try { store.save('exercise', Object.assign(ed ? { id: ed.id } : {}, { name: name, discipline: disc, meas: 'kg', max: m, maxDate: m != null ? (ed && ed.max === m && ed.maxDate ? ed.maxDate : U.today()) : null, rest: r == null ? null : Math.round(r) })); } catch (x) { err.textContent = x.message; return; }
         editEx = null; A.ui.toast(ed ? 'Ejercicio actualizado.' : 'Ejercicio agregado.'); again();
-      } }, h('h3', { class: 'sub' }, ed ? 'Editar ejercicio' : 'Agregar ejercicio'), field('ex-name', 'Nombre', nm),
+      } }, field('ex-name', 'Nombre', nm),
       h('div', { class: 'grid2' }, field('ex-max', 'Máximo (kg)', mx, 'Para calcular kilos desde un %'), field('ex-rest', 'Descanso (seg)', rs)), err,
-      h('div', { class: 'row-end' }, ed ? h('button', { class: 'btn ghost', type: 'button', onclick: () => { editEx = null; again(); } }, 'Cancelar') : null, h('button', { class: 'btn', type: 'submit' }, ed ? 'Actualizar' : 'Agregar'))));
+      h('div', { class: 'row-end' }, ed ? h('button', { class: 'btn ghost', type: 'button', onclick: () => { editEx = null; again(); } }, 'Cancelar') : null, h('button', { class: 'btn', type: 'submit' }, ed ? 'Actualizar' : 'Agregar')))));
 
       /* Rutina semanal */
       const mutate = fn => { const days = JSON.parse(JSON.stringify(plan ? plan.days : [])); fn(days); return store.save('plan', Object.assign(plan ? { id: plan.id } : {}, { name: 'Rutina de ' + DISC_LABEL[disc].toLowerCase(), discipline: disc, kind: 'weekly', days: days })); };
@@ -56,7 +56,7 @@
         const daySel = h('select', { class: 'txt', id: 'pl-day' }, [h('option', { value: '' }, '+ Nuevo día')].concat(days.map(d => h('option', { value: d.id }, DOW_NAME[d.dow] + ' · ' + d.name)))), dn = h('input', { class: 'txt', id: 'pl-dname', type: 'text', maxlength: 60, placeholder: 'Ej. Día A' }), dw = h('select', { class: 'txt', id: 'pl-dow' }, optionsOf(DOW.map(x => [String(x[0]), x[1]]), '1')),
           exSel = h('select', { class: 'txt', id: 'pl-ex' }, exs.map(e => h('option', { value: e.id }, e.name))), sets = numInput('pl-sets', 'Ej. 4'), reps = numInput('pl-reps', 'Ej. 5'), how = h('select', { class: 'txt', id: 'pl-how' }, optionsOf([['none', 'Sin peso fijo (sugerir)'], ['pct', '% de mi máximo'], ['kg', 'Kilos fijos']], 'none')), val = numInput('pl-val', 'Ej. 80'), perr = errBox();
         const newBox = h('div', { class: 'grid2' }, field('pl-dname', 'Nombre del día', dn), field('pl-dow', 'Día de la semana', dw)), syncNew = () => { newBox.hidden = !!daySel.value; }; daySel.addEventListener('change', syncNew); syncNew();
-        el.appendChild(h('form', { class: 'card form', novalidate: true, onsubmit: e => {
+        el.appendChild(h('details', { class: 'card fold' }, h('summary', null, '+ Agregar a la rutina'), h('form', { class: 'form', novalidate: true, onsubmit: e => {
           e.preventDefault(); perr.textContent = '';
           const s = readNum(sets), r = readNum(reps), v = how.value === 'none' ? null : readNum(val), ex = store.get('exercise', exSel.value);
           if (isNaN(s) || s < 1 || s > 20 || isNaN(r) || r < 1 || r > 100) { perr.textContent = 'Series (1 a 20) y repeticiones (1 a 100) deben ser números.'; return; }
@@ -66,9 +66,9 @@
           const item = { exId: exSel.value, sets: Math.round(s), reps: Math.round(r) }; if (how.value === 'pct') item.pct = v; if (how.value === 'kg') item.kg = v;
           mutate(ds => { let d = ds.filter(x => x.id === daySel.value)[0]; if (!d) { d = { id: U.uid(), name: dn.value.trim(), dow: +dw.value, items: [] }; ds.push(d); } d.items.push(item); });
           A.ui.toast('Agregado a la rutina.'); again();
-        } }, h('h3', { class: 'sub' }, 'Agregar a la rutina'), field('pl-day', 'Día', daySel), newBox, field('pl-ex', 'Ejercicio', exSel),
+        } }, field('pl-day', 'Día', daySel), newBox, field('pl-ex', 'Ejercicio', exSel),
         h('div', { class: 'grid2' }, field('pl-sets', 'Series', sets), field('pl-reps', 'Repeticiones', reps)), h('div', { class: 'grid2' }, field('pl-how', 'Carga', how), field('pl-val', 'Valor', val)), perr,
-        h('div', { class: 'row-end' }, h('button', { class: 'btn', type: 'submit' }, 'Agregar'))));
+        h('div', { class: 'row-end' }, h('button', { class: 'btn', type: 'submit' }, 'Agregar')))));
       }
 
       /* Proyección de pesos */

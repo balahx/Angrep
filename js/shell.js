@@ -21,8 +21,11 @@
     [subEl, tabEl].forEach(e => e.addEventListener('scroll', () => fade(e), { passive: true }));
     /* Tocar una fila que tiene «Editar» abre el editor (los botones siguen disponibles) */
     viewEl.addEventListener('click', e => {
-      const row = e.target.closest && e.target.closest('li.row');
-      if (!row || e.target.closest('button, a, input, select, textarea, summary, label')) return;
+      if (e.target.closest('button, a, input, select, textarea, summary, label')) return;
+      const tp = e.target.closest('[data-href]');
+      if (tp) { location.hash = tp.getAttribute('data-href'); return; }
+      const row = e.target.closest('li.row');
+      if (!row) return;
       const ed = row.querySelector(':scope > button[aria-label^="Editar"]');
       if (ed) ed.click();
     });

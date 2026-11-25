@@ -29,14 +29,8 @@
     coachCard.insertBefore(h('h2', { class: 'coach-t' }, todo.length ? 'Hoy toca ' + todo[0].name + '.' : todaySess.length ? 'Sesión de hoy cumplida.' : 'Hoy es día de descanso.'), coachCard.firstChild);
     if (pend.length) coachCard.appendChild(h('p', { class: 'coach-s' }, pend.map((x, i) => i ? x : x.replace(/^./, c => c.toUpperCase())).join(' · ') + '.'));
 
-    /* Avisos */
-    const notes = [];
-    if (weights.length && !weights.some(w => w.date === today)) notes.push(['Aún no registras tu peso de hoy. Pésate y anótalo.', '#/peso/registro', 'Registrar']);
-    if (g.kcal && !dayMeals && hr >= 12) notes.push(['Aún no registras comidas hoy. Anota lo que llevas.', '#/comida/registro', 'Registrar']);
-    if (notes.length) el.appendChild(h('section', { class: 'card', 'aria-label': 'Avisos' }, h('h2', null, 'Pendiente'), h('ul', { class: 'rows' }, notes.slice(0, 3).map(n => h('li', { class: 'row' }, h('div', { class: 'row-main' }, h('span', null, n[0])), link(n[1], n[2]))))));
-
     /* Peso */
-    const wc = h('section', { class: 'card' }, h('h2', null, 'Peso'));
+    const wc = h('section', { class: 'card tap', 'data-href': '#/peso/registro' }, h('h2', null, 'Peso'));
     if (st) {
       wc.appendChild(tiles([tile('Último peso', U.fmtNum(st.last.value, 1) + ' kg', st.last.date === today ? 'de hoy' : U.fmtDate(st.last.date)), tile('Tendencia (7 d)', U.fmtNum(st.avg, 1) + ' kg', st.d7 == null ? 'aún sin comparar' : signed(st.d7, 1, 'kg') + ' en 7 días')]));
       const gm = store.get('goal', 'goal_main_weight');
@@ -51,7 +45,7 @@
     wc.appendChild(h('div', { class: 'row-end' }, link('#/peso/registro', weights.some(w => w.date === today) ? 'Ver registro' : 'Registrar peso', 'btn ghost sm'))); el.appendChild(wc);
 
     /* Comida */
-    const hoy = h('section', { class: 'card' }, h('h2', null, 'Hoy')), fc = h('div', { class: 'list-sec' }, h('h3', null, 'Alimentación de hoy'));
+    const hoy = h('section', { class: 'card' }, h('h2', null, 'Hoy')), fc = h('div', { class: 'list-sec tap', 'data-href': g.kcal ? '#/comida/registro' : '#/comida/objetivos' }, h('h3', null, 'Alimentación de hoy'));
     if (g.kcal) {
       const eaten = dayMeals ? dayMeals.kcal : 0, left = Math.round(g.kcal - eaten);
       fc.appendChild(meter('Kcal', eaten, g.kcal, 'kcal', 0)); if (g.p) fc.appendChild(meter('Proteína', dayMeals ? dayMeals.p : 0, g.p, 'g', 0));
@@ -62,7 +56,7 @@
     fc.appendChild(h('div', { class: 'row-end' }, link(g.kcal ? '#/comida/registro' : '#/comida/objetivos', g.kcal ? 'Registrar comida' : 'Definir objetivo', 'btn ghost sm'))); hoy.appendChild(fc);
 
     /* Pasos */
-    const todaySteps = steps.filter(r => r.date === today)[0], sc = h('div', { class: 'list-sec' }, h('h3', null, 'Pasos de hoy'));
+    const todaySteps = steps.filter(r => r.date === today)[0], sc = h('div', { class: 'list-sec tap', 'data-href': '#/peso/pasos' }, h('h3', null, 'Pasos de hoy'));
     if (todaySteps || stepGoal) sc.appendChild(meter('Pasos', todaySteps ? todaySteps.count : 0, stepGoal, 'pasos', 0, true)); else sc.appendChild(h('p', { class: 'muted' }, 'Aún no registras pasos. Puedes anotar los de hoy y fijar una meta.'));
     sc.appendChild(h('div', { class: 'row-end' }, link('#/peso/pasos', todaySteps ? 'Ver pasos' : 'Registrar pasos', 'btn ghost sm'))); hoy.appendChild(sc);
 
@@ -71,7 +65,7 @@
     ['halterofilia', 'pesas'].forEach(d => {
       const plan = plans.filter(p => p.discipline === d)[0], day = plan ? K.plannedDays(plan).filter(x => x.dow === dow)[0] : null, did = sessions.filter(s => s.discipline === d && s.date === today);
       if (!day && !did.length) return; any = true;
-      tc.appendChild(h('div', { class: 'row' }, h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, W.DISC_LABEL[d] + (day ? ' · ' + day.name : '')), h('span', { class: 'hint' }, did.length ? 'Sesión hecha: ' + U.fmtNum(T.sessionStats(did[0]).tonnage, 0) + ' kg de tonelaje' : day.items.length + (day.items.length === 1 ? ' ejercicio planificado' : ' ejercicios planificados'))),
+      tc.appendChild(h('div', { class: 'row' + (did.length ? '' : ' tap'), 'data-href': did.length ? null : '#/entrenos/' + d + '/hoy' }, h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, W.DISC_LABEL[d] + (day ? ' · ' + day.name : '')), h('span', { class: 'hint' }, did.length ? 'Sesión hecha: ' + U.fmtNum(T.sessionStats(did[0]).tonnage, 0) + ' kg de tonelaje' : day.items.length + (day.items.length === 1 ? ' ejercicio planificado' : ' ejercicios planificados'))),
         did.length ? h('span', { class: 'status logrado' }, '✓ Hecha') : link('#/entrenos/' + d + '/hoy', 'Empezar', 'btn sm')));
     });
     if (todayCardio.m) { any = true; tc.appendChild(h('p', { class: 'muted' }, 'Cardio y otros: ' + todayCardio.m + ' min' + (todayCardio.k ? ' · ' + U.fmtNum(todayCardio.k, 0) + ' kcal' : '') + '.')); }
@@ -98,15 +92,15 @@
     if (mp) parts.push(['entrenos', mb / mp]);
     const pct = Math.round(100 * parts.reduce((t, x) => t + x[1], 0) / parts.length), worst = parts.slice().sort((a, b) => a[1] - b[1])[0];
     el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Esta semana'),
-      h('p', { class: 'coach-s' }, (hasPlan ? 'Llevas ' + done + ' de ' + planned + ' sesiones. ' : '') + (sentence || '') + ' ' + 'Vas en ' + pct + ' % del mes' + (parts.length > 1 && worst[1] < 0.8 ? '; lo que más se te escapa es ' + worst[0] + '.' : '.')), tiles([
+      h('p', { class: 'coach-s' }, (hasPlan ? 'Llevas ' + done + ' de ' + planned + ' sesiones. ' : '') + (sentence || '') + ' ' + 'Vas en ' + pct + ' % del mes' + (parts.length > 1 && worst[1] < 0.8 ? '; lo que más se te escapa es ' + worst[0] + '.' : '.')), h('details', { class: 'more' }, h('summary', null, 'Ver las cifras de la semana'), tiles([
       tile('Pesajes', wN + ' de ' + dates.length, 'días con peso'), tile('Kcal en meta', kOk == null ? '–' : kOk + ' de ' + kLog, kOk == null ? 'sin objetivo' : 'días registrados'),
-      tile('Pasos en meta', sOk == null ? '–' : sOk + ' de ' + dates.length, sOk == null ? 'sin meta' : 'días'), tile('Sesiones', hasPlan ? done + ' de ' + planned : String(totalSes), hasPlan ? 'planificadas' : 'de fuerza'), tile('Cardio y otros', cardioMin + ' min')])));
+      tile('Pasos en meta', sOk == null ? '–' : sOk + ' de ' + dates.length, sOk == null ? 'sin meta' : 'días'), tile('Sesiones', hasPlan ? done + ' de ' + planned : String(totalSes), hasPlan ? 'planificadas' : 'de fuerza'), tile('Cardio y otros', cardioMin + ' min')]))));
 
     /* Rachas */
     const ls = K.logStreak(weights.map(w => w.date), today), ssn = C.stepsStats(steps, stepGoal, today), kc = g.kcal ? F.compliance(F.series(meals, nutri, U.ymd(U.addDays(U.parseYmd(today), -59)), today), g, today, 30) : null;
     let tw = 0; ['halterofilia', 'pesas'].forEach(d => { const plan = plans.filter(p => p.discipline === d)[0]; if (K.plannedDays(plan).length) tw = Math.max(tw, K.summary(K.weeks(plan, sessions.filter(s => s.discipline === d), today, 12)).streak); });
     const u = (n, a, b) => n + ' ' + (n === 1 ? a : b);
-    el.appendChild(h('section', { class: 'card' }, h('h2', null, 'Rachas'), tiles([tile('Pesaje', u(ls.streak, 'día', 'días'), 'mejor: ' + ls.best), tile('Kcal en meta', kc ? u(kc.streak, 'día', 'días') : '–', kc ? '' : 'sin objetivo'), tile('Pasos', stepGoal ? u(ssn.streak, 'día', 'días') : '–', stepGoal ? 'mejor: ' + ssn.best : 'sin meta'), tile('Entrenos', tw ? u(tw, 'semana', 'semanas') : '–', tw ? 'cumpliendo la rutina' : 'sin racha todavía')]),
+    el.appendChild(h('details', { class: 'card fold' }, h('summary', null, 'Rachas'), tiles([tile('Pesaje', u(ls.streak, 'día', 'días'), 'mejor: ' + ls.best), tile('Kcal en meta', kc ? u(kc.streak, 'día', 'días') : '–', kc ? '' : 'sin objetivo'), tile('Pasos', stepGoal ? u(ssn.streak, 'día', 'días') : '–', stepGoal ? 'mejor: ' + ssn.best : 'sin meta'), tile('Entrenos', tw ? u(tw, 'semana', 'semanas') : '–', tw ? 'cumpliendo la rutina' : 'sin racha todavía')]),
       h('p', { class: 'hint' }, 'Ver el detalle de cumplimiento:'), h('div', { class: 'row-end wrap' }, link('#/peso/cumplimiento', 'Peso'), link('#/comida/cumplimiento', 'Comida'), link('#/entrenos/pesas/cumplimiento', 'Entrenos'))));
   });
 })(window);
