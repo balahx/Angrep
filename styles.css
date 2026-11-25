@@ -150,6 +150,8 @@ a { color: var(--strong); }
 .more summary, .dt-wrap summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; color: var(--strong); }
 .sub { font-size: 1rem; margin: 16px 0 6px; }
 .status { font-size: .85rem; font-weight: 600; padding: 3px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); white-space: nowrap; }
+.row-note { flex: 1 1 100%; min-width: 0; }
+.row-note .status { display: inline-block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .status.logrado, .status.tarde { border-color: var(--ok); }
 .status.vencido, .status.nocumplido { border-color: var(--danger); }
 .btn[href] { display: inline-flex; align-items: center; text-decoration: none; }

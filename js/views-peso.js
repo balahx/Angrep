@@ -57,11 +57,11 @@
     const row = p => {
       const i = series.indexOf(p), prev = i > 0 ? series[i - 1] : null, r = recs[p.date], md = msBy[p.date] ? C.milestoneDay(msBy[p.date], p.value) : null;
       return h('li', { class: 'row' },
-        h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, U.fmtDate(p.date)), r && r.note ? h('span', { class: 'hint' }, r.note) : null,
-          md ? h('span', { class: 'status ' + md.state }, MS[md.state][0] + ' Objetivo ' + kgText(msBy[p.date].target) + ': ' + MS[md.state][1].toLowerCase()) : null),
+        h('div', { class: 'row-main' }, h('span', { class: 'row-t' }, U.fmtDate(p.date)), r && r.note ? h('span', { class: 'hint' }, r.note) : null),
         h('strong', null, kgText(p.value)), h('span', { class: 'delta' }, prev ? signed(U.round(p.value - prev.value, 2), 1) : ''),
         h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Editar ' + U.fmtDate(p.date), onclick: () => { date.value = p.date; regDate = p.date; sync(); kg.focus(); date.scrollIntoView({ block: 'center' }); } }, 'Editar'),
-        h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Eliminar ' + U.fmtDate(p.date), onclick: () => removeWithUndo('weight', r, () => store.save('weight', { date: r.date, kg: r.kg, note: r.note }), again) }, 'Eliminar'));
+        h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Eliminar ' + U.fmtDate(p.date), onclick: () => removeWithUndo('weight', r, () => store.save('weight', { date: r.date, kg: r.kg, note: r.note }), again) }, 'Eliminar'),
+        md ? h('div', { class: 'row-note' }, h('span', { class: 'status ' + md.state }, MS[md.state][0] + ' Objetivo ' + kgText(msBy[p.date].target) + ': ' + MS[md.state][1].toLowerCase())) : null);
     };
     const weeks = [], wk = {}, thisWeek = mondayOf(U.today()), thisYear = U.today().slice(0, 4);
     series.slice().reverse().forEach(p => { const m = mondayOf(p.date); if (!wk[m]) { wk[m] = []; weeks.push(m); } wk[m].push(p); });
